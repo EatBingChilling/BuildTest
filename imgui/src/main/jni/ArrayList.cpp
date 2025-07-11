@@ -203,14 +203,14 @@ void DrawFeatureList() {
         g_needsSort = false;
     }
     for (const auto& item : items) {
-        if (item.anim < 0.01f || !item.visible || (Settings::Visibility == Settings::Visibility::Bound && item.key == 0)) continue;
+        if (item.anim < 0.01f || !item.visible) continue;
         std::string fullText = item.name + (item.settingsText.empty() ? "" : " " + item.settingsText);
         float width = font ? font->CalcTextSizeA(Settings::FontSize, FLT_MAX, 0.0f, fullText.c_str()).x : fullText.length() * 10.0f;
         maxWidth = std::max(maxWidth, width);
     }
     pthread_mutex_unlock(&g_listMutex);
 
-    float windowWidth = maxWidth + padding * 10.0f + (Settings::Display == Settings::DisplayMode::Bar || Settings::Display == Settings::DisplayMode::Split ? 10.0f : 0.0f);
+    float windowWidth = maxWidth + padding * 10.0f + 10.0f; // Extra space for the color bar
     ImGui::SetNextWindowPos(ImVec2(screenWidth - windowWidth - 10.0f, 10.0f), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(windowWidth, screenHeight), ImGuiCond_Always);
 
@@ -227,13 +227,10 @@ void DrawFeatureList() {
 
         float y = 10.0f;
         float time = ImGui::GetTime();
-        std::vector<std::tuple<ImVec2, ImVec2, ImColor>> backgroundRects;
-        std::vector<std::tuple<ImVec2, ImVec2, ImColor>> outlineLines;
-
         pthread_mutex_lock(&g_listMutex);
         for (size_t i = 0; i < items.size(); ++i) {
             ListItem& item = items[i];
-            if (!item.visible || (Settings::Visibility == Settings::Visibility::Bound && item.key == 0)) continue;
+            if (!item.visible) continue;
 
             item.anim = lerp(item.anim, item.enabled ? 1.0f : 0.0f, io.DeltaTime * 12.0f);
             item.anim = clamp(item.anim, 0.0f, 1.0f);
@@ -244,95 +241,34 @@ void DrawFeatureList() {
             ImVec2 textSize = font ? font->CalcTextSizeA(Settings::FontSize, FLT_MAX, 0.0f, fullText.c_str()) : ImVec2(fullText.length() * 10.0f, Settings::FontSize);
             ImColor color = GetRainbowColor(time, i * 0.5f);
 
-            float endX = screenWidth - textSize.x - padding * 5.0f - (Settings::Display == Settings::DisplayMode::Bar || Settings::Display == Settings::DisplayMode::Split ? 10.0f : 0.0f);
+            float endX = screenWidth - textSize.x - padding * 5.0f - 10.0f; // Adjust for color bar
             float x = lerp(screenWidth + 14.0f, endX, item.anim);
             ImVec2 textPos = ImVec2(x, y);
             ImVec2 rectMin = ImVec2(x - padding, y);
             ImVec2 rectMax = ImVec2(x + textSize.x + padding, y + Settings::Height);
 
-            if (Settings::Glow && Settings::Display != Settings::DisplayMode::None) {
-                float glowAlpha = (Settings::Display == Settings::DisplayMode::Bar || Settings::Display == Settings::DisplayMode::Split) ? 0.7f : 0.83f;
-                DrawGlowRect(drawList, rectMin, rectMax, color, Settings::GlowStrength, glowAlpha * item.anim);
-            }
+            // Draw background rectangle
+            drawList->AddRectFilled(rectMin, rectMax, ImColor(0.0f, 0.0f, 0.0f, 0.3f)); // 30% opacity black background
 
-            if (Settings::ShadowBackground && Settings::Display != Settings::DisplayMode::Outline && Settings::Display != Settings::DisplayMode::None) {
-                DrawShadowBackground(drawList, rectMin, rectMax, Settings::BackgroundOpacity * item.anim);
-            }
-            if (Settings::Display == Settings::DisplayMode::Outline) {
-                drawList->AddRectFilled(rectMin, rectMax, ImColor(color.Value.x * Settings::BackgroundOpacity, color.Value.y * Settings::BackgroundOpacity, color.Value.z * Settings::BackgroundOpacity, 0.4f * item.anim));
-            }
+            // Draw color bar
+            ImVec2 barMin = ImVec2(rectMax.x, rectMin.y);
+            ImVec2 barMax = ImVec2(rectMax.x + 5.0f, rectMax.y); // 5sp width
+            drawList->AddRectFilled(barMin, barMax, color);
 
-            ImVec2 nameSize = font ? font->CalcTextSizeA(Settings::FontSize, FLT_MAX, 0.0f, item.name.c_str()) : ImVec2(item.name.length() * 10.0f, Settings::FontSize);
+            // Draw text
             DrawShadowText(drawList, font, Settings::FontSize, item.name, textPos, color);
             if (!item.settingsText.empty()) {
-                ImVec2 settingsPos = ImVec2(textPos.x + nameSize.x, textPos.y);
+                ImVec2 settingsPos = ImVec2(textPos.x + textSize.x, textPos.y);
                 DrawShadowText(drawList, font, Settings::FontSize, item.settingsText, settingsPos, ImColor(0.9f, 0.9f, 0.9f, 1.0f));
-            }
-
-            ImVec2 mousePos = io.MousePos;
-            bool isHovered = mousePos.x >= rectMin.x && mousePos.x <= rectMax.x && mousePos.y >= rectMin.y && mousePos.y <= rectMax.y;
-            if (isHovered) {
-                drawList->AddRect(rectMin, rectMax, ImColor(1.0f, 1.0f, 1.0f, 0.5f * item.anim), 0.0f, 0, 2.0f);
-                drawList->AddRectFilled(rectMin, rectMax, ImColor(1.0f, 1.0f, 1.0f, 0.1f * item.anim));
-                if (io.MouseClicked[0]) {
-                    item.enabled = !item.enabled;
-                    g_listItems[i].enabled = item.enabled;
-                    LOGI("Toggled module: %s (%s)", item.name.c_str(), item.enabled ? "enabled" : "disabled");
-                }
-            }
-
-            if (Settings::Display == Settings::DisplayMode::Bar || Settings::Display == Settings::DisplayMode::Split) {
-                ImVec2 lineStart = ImVec2(rectMax.x + 2.0f, rectMin.y + 4.0f);
-                ImVec2 lineEnd = ImVec2(lineStart.x + (Settings::Display == Settings::DisplayMode::Bar ? 4.0f : 2.0f), rectMax.y - 4.0f);
-                drawList->AddRectFilled(lineStart, lineEnd, color, 3.0f);
-                if (Settings::Glow) {
-                    DrawGlowRect(drawList, lineStart, lineEnd, color, Settings::GlowStrength, 0.7f * item.anim);
-                }
-            }
-
-            if (Settings::Display == Settings::DisplayMode::Outline) {
-                backgroundRects.emplace_back(rectMin, rectMax, color);
             }
 
             y += Settings::Height * item.anim;
         }
         pthread_mutex_unlock(&g_listMutex);
-
-        if (Settings::Display == Settings::DisplayMode::Outline && !backgroundRects.empty()) {
-            std::sort(backgroundRects.begin(), backgroundRects.end(),
-                      [](const auto& a, const auto& b) { return std::get<0>(a).y < std::get<0>(b).y; });
-
-            for (size_t i = 0; i < backgroundRects.size(); ++i) {
-                auto [start, end, color] = backgroundRects[i];
-                ImVec2 nextStart = i + 1 < backgroundRects.size() ? std::get<0>(backgroundRects[i + 1]) : start;
-
-                if (i == 0 || nextStart.x >= start.x) {
-                    outlineLines.emplace_back(ImVec2(start.x, start.y), ImVec2(start.x, end.y), color);
-                }
-                outlineLines.emplace_back(ImVec2(end.x, start.y), ImVec2(end.x, end.y), color);
-                if (i == 0) {
-                    outlineLines.emplace_back(ImVec2(start.x, start.y), ImVec2(end.x, start.y), color);
-                }
-                float endX = nextStart.x < start.x ? start.x : end.x;
-                if (i == backgroundRects.size() - 1 || nextStart.x >= start.x) {
-                    outlineLines.emplace_back(ImVec2(start.x, end.y), ImVec2(endX, end.y), color);
-                }
-            }
-
-            std::sort(backgroundRects.begin(), backgroundRects.end(),
-                      [](const auto& a, const auto& b) { return std::get<0>(a).x < std::get<0>(b).x; });
-            if (!backgroundRects.empty()) {
-                auto [start, end, color] = backgroundRects.front();
-                outlineLines.emplace_back(ImVec2(start.x, start.y), ImVec2(start.x, end.y), color);
-            }
-
-            for (const auto& [start, end, color] : outlineLines) {
-                drawList->AddLine(start, end, color, 2.0f);
-            }
-        }
     }
     ImGui::End();
 }
+
 
 extern "C" {
 JNIEXPORT void JNICALL Java_com_mycompany_application_GLES3JNIView_init(JNIEnv* env, jclass cls);
