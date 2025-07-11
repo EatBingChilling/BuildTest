@@ -8,14 +8,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.offset
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,12 +49,23 @@ class OverlayModuleList : OverlayWindow() {
         private val overlayInstance by lazy { OverlayModuleList() }
         private var shouldShowOverlay = false
 
-        val moduleColors = listOf(
-            Color(0xFFff5555),
-            Color(0xFF55ff55),
-            Color(0xFF5555ff),
-            Color(0xFFffff55)
+        private var capitalizeAndMerge = false
+        private var displayMode = "None"
+
+        val gradientColors = listOf(
+            Color(0xFFFF4081),
+            Color(0xFF03DAC5),
+            Color(0xFF3F51B5),
+            Color(0xFFFFC107)
         )
+
+        fun setCapitalizeAndMerge(enabled: Boolean) {
+            capitalizeAndMerge = enabled
+        }
+
+        fun setDisplayMode(mode: String) {
+            displayMode = mode
+        }
 
         fun showText(moduleName: String) {
             if (shouldShowOverlay) {
@@ -149,7 +161,7 @@ class OverlayModuleList : OverlayWindow() {
             }
         }
 
-        val offsetX by animateFloatAsState(
+        val animationOffset by animateFloatAsState(
             targetValue = when {
                 exitState -> 200f
                 visible -> 0f
@@ -172,19 +184,16 @@ class OverlayModuleList : OverlayWindow() {
             animationSpec = tween(300)
         )
 
-        val textColor = moduleColors[index % moduleColors.size]
-        val barColor = textColor
-
         Row(
             modifier = Modifier
-                .offset(x = offsetX.dp)
+                .offset(x = animationOffset.dp)
                 .alpha(alpha)
                 .scale(scale)
                 .wrapContentWidth()
                 .height(28.dp)
                 .padding(horizontal = 4.dp)
                 .background(
-                    color = Color.Black.copy(alpha = 0.3f),
+                    brush = Brush.linearGradient(gradientColors),
                     shape = RoundedCornerShape(4.dp)
                 )
                 .clickable(
@@ -198,18 +207,21 @@ class OverlayModuleList : OverlayWindow() {
         ) {
             Text(
                 text = module.name,
-                color = textColor,
+                color = Color.White,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .weight(1f)
             )
+
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(5.dp) // ← 修复单位错误
-                    .background(color = barColor)
+                    .width(5.dp)
+                    .background(
+                        brush = Brush.linearGradient(gradientColors)
+                    )
             )
         }
     }
