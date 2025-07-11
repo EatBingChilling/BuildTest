@@ -5,6 +5,8 @@ import android.view.WindowManager
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -15,15 +17,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.offset
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
-import com.project.lumina.client.ui.theme.OArrayBase
 import kotlinx.coroutines.delay
-import kotlin.random.Random
 
 class OverlayModuleList : OverlayWindow() {
     private val _layoutParams by lazy {
@@ -62,7 +61,7 @@ class OverlayModuleList : OverlayWindow() {
                 try {
                     OverlayManager.showOverlayWindow(overlayInstance)
                 } catch (e: Exception) {
-                    // Ignore exception
+                    // Ignore
                 }
             }
         }
@@ -77,7 +76,7 @@ class OverlayModuleList : OverlayWindow() {
                 try {
                     OverlayManager.dismissOverlayWindow(overlayInstance)
                 } catch (e: Exception) {
-                    // Ignore exception
+                    // Ignore
                 }
             }
         }
@@ -96,8 +95,7 @@ class OverlayModuleList : OverlayWindow() {
 
         val overlayAlpha by animateFloatAsState(
             targetValue = if (overlayVisible) 1f else 0f,
-            animationSpec = tween(500),
-            label = "overlayAlpha"
+            animationSpec = tween(500)
         )
 
         val sortedModules = moduleState.modules.sortedByDescending { it.name.length }
@@ -134,7 +132,9 @@ class OverlayModuleList : OverlayWindow() {
         var visible by remember { mutableStateOf(false) }
         var exitState by remember { mutableStateOf(false) }
         val isEnabled by remember { derivedStateOf { moduleState.isModuleEnabled(module.name) } }
-        val isMarkedForRemoval by remember { derivedStateOf { moduleState.modulesToRemove.contains(module.name) } }
+        val isMarkedForRemoval by remember {
+            derivedStateOf { moduleState.modulesToRemove.contains(module.name) }
+        }
 
         LaunchedEffect(Unit) {
             delay(entryDelay.toLong())
@@ -155,14 +155,12 @@ class OverlayModuleList : OverlayWindow() {
                 visible -> 0f
                 else -> -200f
             },
-            animationSpec = tween(300),
-            label = "offsetX"
+            animationSpec = tween(300)
         )
 
         val alpha by animateFloatAsState(
             targetValue = if (visible && !exitState) 1f else 0f,
-            animationSpec = tween(300),
-            label = "alpha"
+            animationSpec = tween(300)
         )
 
         val scale by animateFloatAsState(
@@ -171,12 +169,11 @@ class OverlayModuleList : OverlayWindow() {
                 visible -> 1f
                 else -> 0.8f
             },
-            animationSpec = tween(300),
-            label = "scale"
+            animationSpec = tween(300)
         )
 
-        val textColor = moduleColors[index % moduleColors.size] // Cycle through colors
-        val barColor = textColor // Same color for the bar
+        val textColor = moduleColors[index % moduleColors.size]
+        val barColor = textColor
 
         Row(
             modifier = Modifier
@@ -187,7 +184,7 @@ class OverlayModuleList : OverlayWindow() {
                 .height(28.dp)
                 .padding(horizontal = 4.dp)
                 .background(
-                    color = Color.Black.copy(alpha = 0.3f), // 30% opacity black background
+                    color = Color.Black.copy(alpha = 0.3f),
                     shape = RoundedCornerShape(4.dp)
                 )
                 .clickable(
@@ -201,7 +198,7 @@ class OverlayModuleList : OverlayWindow() {
         ) {
             Text(
                 text = module.name,
-                color = textColor, // Colored text
+                color = textColor,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
@@ -211,8 +208,8 @@ class OverlayModuleList : OverlayWindow() {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(5.sp) // 5sp width bar
-                    .background(color = barColor) // Colored bar
+                    .width(5.dp) // ← 修复单位错误
+                    .background(color = barColor)
             )
         }
     }
