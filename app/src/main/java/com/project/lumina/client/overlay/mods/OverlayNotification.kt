@@ -138,9 +138,14 @@ private fun NotificationCard(
     val progressAnimation = remember { Animatable(1f) }
     LaunchedEffect(Unit) { progressAnimation.animateTo(0f, tween(2500)) }
 
-    val (baseColor, accentColor, statusText) = when (item.action) {
-        ModuleAction.ENABLE  -> Triple(ONotifBase,  ONotifAccent,  "Enabled")
-        ModuleAction.DISABLE -> Triple(Color(0xFF343434), Color(0xFFE53935), "Disabled")
+    val accentColor = when (item.action) {
+        ModuleAction.ENABLE  -> ONotifAccent
+        ModuleAction.DISABLE -> Color(0xFFE53935)
+    }
+
+    val statusText = when (item.action) {
+        ModuleAction.ENABLE  -> "Enabled"
+        ModuleAction.DISABLE -> "Disabled"
     }
 
     Box(
@@ -151,12 +156,12 @@ private fun NotificationCard(
             .shadow(12.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
             .width(140.dp)
-            .height(75.dp)
+            .height(55.dp) // ✅ 高度减小
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(baseColor.copy(alpha = 0.95f))
+                .background(ONotifBase.copy(alpha = 0.4f)) // ✅ 背景统一颜色，透明度 40%
                 .padding(10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -170,13 +175,6 @@ private fun NotificationCard(
                     color = ONotifText,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    style = TextStyle(
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.7f),
-                            offset = Offset(0f, 1f),
-                            blurRadius = 2f
-                        )
-                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -187,19 +185,14 @@ private fun NotificationCard(
                         .background(accentColor, RoundedCornerShape(3.dp))
                 )
             }
+
             Text(
                 text = statusText,
                 color = ONotifText.copy(alpha = 0.8f),
                 fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                style = TextStyle(
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.5f),
-                        offset = Offset(0f, 0.5f),
-                        blurRadius = 1f
-                    )
-                )
+                fontWeight = FontWeight.Medium
             )
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
