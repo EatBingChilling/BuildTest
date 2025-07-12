@@ -20,7 +20,7 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
     private var speedMultiplierValue by floatValue("SpeedMultiplier", 1f, 0.5f..3f)
     private var speedBoostValue by boolValue("Speed Boost", false)
     
-    private var jumpTriggered = false
+    private var jumpTriggered by boolValue("JumpTriggered", false)
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
         if (!isEnabled) {
