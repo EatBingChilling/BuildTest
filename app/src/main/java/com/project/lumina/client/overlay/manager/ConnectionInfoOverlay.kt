@@ -271,7 +271,7 @@ class ConnectionInfoWindow : OverlayWindow() {
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "IP: ${ConnectionInfoOverlay.localIp}",
+                            text = "IP: 127.0.0.1",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
@@ -300,7 +300,7 @@ class ConnectionInfoWindow : OverlayWindow() {
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Text(
-                        text = "添加服务器 > §bLumina | ${ConnectionInfoOverlay.localIp}:19132",
+                        text = "添加服务器 > §bLumina | 127.0.0.1:19132",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,

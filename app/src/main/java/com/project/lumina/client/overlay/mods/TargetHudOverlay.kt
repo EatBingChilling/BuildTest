@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import com.project.lumina.client.ui.theme.MyFontFamily
 import kotlinx.coroutines.delay
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.draw.graphicsLayer
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 
@@ -50,9 +51,9 @@ class TargetHudOverlay : OverlayWindow() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
-            gravity = Gravity.BOTTOM or Gravity.START   // ← 固定在左下角
-            x = 20                                      // ← 左边距
-            y = 20                                      // ← 下边距
+            gravity = Gravity.BOTTOM or Gravity.START   // 左下角
+            x = 20                                      // 左边距
+            y = 20                                      // 下边距
         }
     }
 
@@ -219,7 +220,10 @@ class TargetHudOverlay : OverlayWindow() {
                         .size(54.dp)
                         .scale(hurtScale)
                         .alpha(hurtAlpha)
-                        .clip(CircleShape)
+                        .graphicsLayer {
+                            shape = CircleShape
+                            clip = true
+                        }
                         .background(Color.White.copy(alpha = 0.05f))
                         .border(
                             2.dp,
@@ -234,7 +238,10 @@ class TargetHudOverlay : OverlayWindow() {
                             contentDescription = "Player Avatar",
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(CircleShape),
+                                .graphicsLayer {
+                                    shape = CircleShape
+                                    clip = true
+                                },
                             contentScale = ContentScale.Crop
                         )
                     } else {
@@ -269,7 +276,10 @@ class TargetHudOverlay : OverlayWindow() {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(10.dp)
-                                .clip(RoundedCornerShape(5.dp))
+                                .graphicsLayer {
+                                    shape = RoundedCornerShape(5.dp)
+                                    clip = true
+                                }
                                 .background(Color.Black.copy(alpha = 0.4f))
                         ) {
                             val distancePercentage =
@@ -280,7 +290,10 @@ class TargetHudOverlay : OverlayWindow() {
                                     modifier = Modifier
                                         .fillMaxWidth(distancePercentage)
                                         .fillMaxHeight()
-                                        .clip(RoundedCornerShape(5.dp))
+                                        .graphicsLayer {
+                                            shape = RoundedCornerShape(5.dp)
+                                            clip = true
+                                        }
                                         .background(
                                             brush = Brush.horizontalGradient(
                                                 colors = listOf(
@@ -299,7 +312,7 @@ class TargetHudOverlay : OverlayWindow() {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${String.format("%.1f", animatedDistance)}米",
+                                text = "${String.format("%.1f", animatedDistance)}m",
                                 color = themeColors.first.copy(alpha = 1.0f),
                                 fontSize = 12.sp,
                                 fontFamily = fontFamily,
@@ -308,10 +321,10 @@ class TargetHudOverlay : OverlayWindow() {
 
                             Text(
                                 text = when {
-                                    animatedDistance <= 5f -> "危险"
-                                    animatedDistance <= 15f -> "太近"
-                                    animatedDistance <= 30f -> "一般"
-                                    else -> "远"
+                                    animatedDistance <= 5f -> "DANGER"
+                                    animatedDistance <= 15f -> "CLOSE"
+                                    animatedDistance <= 30f -> "MEDIUM"
+                                    else -> "FAR"
                                 },
                                 color = statusColor,
                                 fontSize = 10.sp,
@@ -347,7 +360,7 @@ class TargetHudOverlay : OverlayWindow() {
     private fun TargetHudContentClosePreview() {
         val defaultFontFamily = FontFamily.Default
         TargetHudContent(
-            username = "敌人",
+            username = "Enemy",
             image = null,
             distance = 3.2f,
             health = 3.2f,
