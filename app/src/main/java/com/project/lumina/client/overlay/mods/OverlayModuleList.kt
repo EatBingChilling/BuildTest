@@ -19,6 +19,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.*
+
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
@@ -41,12 +42,16 @@ class OverlayModuleList : OverlayWindow() {
 
     override val layoutParams: WindowManager.LayoutParams get() = _layoutParams
 
+    /* ======================================================================= */
+    /*  对外静态接口                                                             */
+    /* ======================================================================= */
+
     companion object {
         private val moduleState = ModuleState()
         private val overlayInstance by lazy { OverlayModuleList() }
         private var shouldShowOverlay = false
 
-        /* 对外暴露的静态方法（保持兼容）*/
+        /* 真正用到的四个方法 */
         fun showText(name: String) {
             if (shouldShowOverlay) {
                 moduleState.addModule(name)
@@ -64,9 +69,18 @@ class OverlayModuleList : OverlayWindow() {
         }
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
+
+        /* 向下兼容空壳，防止 NetBound.kt 编译报错 */
+        @Suppress("unused")
+        fun setCapitalizeAndMerge(enabled: Boolean) = Unit
+
+        @Suppress("unused")
+        fun setDisplayMode(mode: String) = Unit
     }
 
-    /* ---------------------------------------------------------------------- */
+    /* ======================================================================= */
+    /*  Compose UI                                                              */
+    /* ======================================================================= */
 
     @Composable
     override fun Content() {
@@ -97,7 +111,7 @@ class OverlayModuleList : OverlayWindow() {
         }
     }
 
-    /* -------------------- 单行 Neon -------------------- */
+    /* -------------------- 单行 Neon 绘制 -------------------- */
 
     @Composable
     private fun NeonTextRow(
@@ -110,19 +124,18 @@ class OverlayModuleList : OverlayWindow() {
         val density = LocalDensity.current
         val glowPx = with(density) { 10.dp.toPx() }
 
-        /* 颜色流动 */
+        /* 颜色流动 5s */
         val infinite = rememberInfiniteTransition()
         val phase by infinite.animateFloat(
             0f, 1f,
             infiniteRepeatable(tween(5000, easing = LinearEasing))
         )
 
-        /* 文字测量 */
         val tm = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
         val layout = remember(text) { tm.measure(text, style) }
 
-        /* 动画 */
+        /* 进入/退出动画 */
         var enterDone by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             delay(index * 50L)
@@ -154,11 +167,13 @@ class OverlayModuleList : OverlayWindow() {
             val colorPos = (phase + index * 0.7f / max(total, 1)) % 1f
             val color = smoothColor(colorPos)
 
-            Canvas(Modifier.size(
-                width = with(density) { layout.size.width.toDp() },
-                height = with(density) { layout.size.height.toDp() }
-            )) {
-                /* 发光层 */
+            Canvas(
+                Modifier.size(
+                    width = with(density) { layout.size.width.toDp() },
+                    height = with(density) { layout.size.height.toDp() }
+                )
+            ) {
+                /* 发光层 ×3 */
                 repeat(3) {
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
