@@ -4,6 +4,10 @@ import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,8 +22,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Offset
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
@@ -51,11 +57,14 @@ class OverlayModuleList : OverlayWindow() {
         private var capitalizeAndMerge = false
         private var displayMode = "None"
 
-        val gradientColors = listOf(
-            Color(0xFFFF4081),
-            Color(0xFF03DAC5),
-            Color(0xFF3F51B5),
-            Color(0xFFFFC107)
+        private val rainbowColors = listOf(
+            Color(0xFFFF0000), // 红色
+            Color(0xFFFF8000), // 橙色
+            Color(0xFFFFFF00), // 黄色
+            Color(0xFF00FF00), // 绿色
+            Color(0xFF00FFFF), // 青色
+            Color(0xFF0000FF), // 蓝色
+            Color(0xFF8000FF)  // 紫色
         )
 
         fun setCapitalizeAndMerge(enabled: Boolean) {
@@ -117,7 +126,7 @@ class OverlayModuleList : OverlayWindow() {
                 .alpha(overlayAlpha)
                 .background(Color.Transparent),
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             sortedModules.forEachIndexed { index, module ->
                 key(module.id) {
@@ -144,6 +153,30 @@ class OverlayModuleList : OverlayWindow() {
         val isEnabled by remember { derivedStateOf { moduleState.isModuleEnabled(module.name) } }
         val isMarkedForRemoval by remember {
             derivedStateOf { moduleState.modulesToRemove.contains(module.name) }
+        }
+
+        // 创建彩虹色动态渐变动画
+        val infiniteTransition = rememberInfiniteTransition()
+        val animatedOffset by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000), // 2秒循环一次
+                repeatMode = RepeatMode.Restart
+            )
+        )
+
+        // 创建彩虹色动态渐变
+        val rainbowGradient = remember(animatedOffset) {
+            val totalColors = rainbowColors.size
+            val adjustedOffset = (animatedOffset * totalColors) % totalColors
+            
+            val colorList = mutableListOf<Color>()
+            for (i in 0 until 3) { // 取3个连续的颜色用于渐变
+                val colorIndex = ((adjustedOffset + i) % totalColors).toInt()
+                colorList.add(rainbowColors[colorIndex])
+            }
+            colorList
         }
 
         LaunchedEffect(Unit) {
@@ -188,10 +221,10 @@ class OverlayModuleList : OverlayWindow() {
                 .alpha(alpha)
                 .scale(scale)
                 .wrapContentWidth()
-                .height(28.dp)
+                .height(26.dp)
                 .padding(horizontal = 4.dp)
                 .background(
-                    brush = Brush.linearGradient(gradientColors),
+                    color = Color.Black.copy(alpha = 0.7f), // 半透明黑色背景
                     shape = RoundedCornerShape(4.dp)
                 )
                 .clickable(
@@ -203,22 +236,34 @@ class OverlayModuleList : OverlayWindow() {
                     }
                 }
         ) {
+            // 彩虹渐变文本
             Text(
                 text = module.name,
-                color = Color.White,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .wrapContentWidth()
+                    .wrapContentWidth(),
+                style = TextStyle(
+                    brush = Brush.linearGradient(
+                        colors = rainbowGradient,
+                        start = Offset(0f, 0f),
+                        end = Offset(Float.POSITIVE_INFINITY, 0f)
+                    )
+                )
             )
 
+            // 彩虹渐变竖条
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(5.dp)
+                    .width(4.dp)
                     .background(
-                        brush = Brush.linearGradient(gradientColors)
+                        brush = Brush.linearGradient(
+                            colors = rainbowGradient,
+                            start = Offset(0f, 0f),
+                            end = Offset(0f, 100f)
+                        )
                     )
             )
         }
