@@ -1,7 +1,7 @@
 package com.project.lumina.client.overlay.mods
 
 import android.graphics.BlurMaskFilter
-import android.graphics.Color as NativeColor
+import android.graphics.Color as AndroidColor
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.animation.core.*
@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.LocalDensity
@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.*
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 class OverlayModuleList : OverlayWindow() {
@@ -65,42 +67,51 @@ class OverlayModuleList : OverlayWindow() {
         fun isOverlayEnabled() = shouldShowOverlay
     }
 
+    /* -------------------- Compose UI -------------------- */
+
     @Composable
     override fun Content() {
         if (!isOverlayEnabled()) return
 
-        val sorted = moduleState.modules
-            .sortedByDescending { it.name.length }
+        val sorted = remember(moduleState.modules) {
+            moduleState.modules.sortedByDescending { it.name.length }
+        }
 
         Column(
             modifier = Modifier
                 .wrapContentSize()
                 .padding(top = 8.dp, end = 3.dp),
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(0.dp) // 零间距
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             sorted.forEachIndexed { idx, mod ->
                 key(mod.id) {
-                    NeonModuleRow(mod, idx, sorted.size)
+                    NeonTextRow(
+                        text = mod.name,
+                        index = idx,
+                        total = sorted.size,
+                        onRemove = { moduleState.markForRemoval(mod.name) },
+                        isRemoving = moduleState.modulesToRemove.contains(mod.name)
+                    )
                 }
             }
         }
     }
 
+    /* -------------------- Neon Row -------------------- */
+
     @Composable
-    private fun NeonModuleRow(
-        module: ModuleItem,
+    private fun NeonTextRow(
+        text: String,
         index: Int,
-        total: Int
+        total: Int,
+        onRemove: () -> Unit,
+        isRemoving: Boolean
     ) {
-        val text = module.name
-        val isRemoving = remember { mutableStateOf(false) }
+        val density = LocalDensity.current
+        val glowRadiusPx = with(density) { 10.dp.toPx() }
 
-        LaunchedEffect(Unit) {
-            snapshotFlow { moduleState.modulesToRemove }
-                .collect { isRemoving.value = it.contains(module.name) }
-        }
-
+        /* 颜色动画 */
         val infinite = rememberInfiniteTransition()
         val phase by infinite.animateFloat(
             initialValue = 0f,
@@ -110,110 +121,156 @@ class OverlayModuleList : OverlayWindow() {
             )
         )
 
+        /* 文字测量 */
         val textMeasurer = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
-        val measured = remember(text) { textMeasurer.measure(text, style) }
+        val layout = remember(text) { textMeasurer.measure(text, style) }
+        val widthDp = with(density) { layout.size.width.toDp() }
+        val heightDp = with(density) { layout.size.height.toDp() }
 
-        val density = LocalDensity.current
-        val glowRadius = with(density) { 10.dp.toPx() }
+        /* 进入/退出动画 */
+        var enterDone by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            delay(index * 50L)
+            enterDone = true
+        }
 
-        val paddingH = with(density) { 8.dp.toPx() }
-        val paddingV = with(density) { 4.dp.toPx() }
-
-        val targetAlpha = if (isRemoving.value) 0f else 1f
         val alpha by animateFloatAsState(
-            targetValue = targetAlpha,
+            targetValue = if (isRemoving) 0f else if (enterDone) 1f else 0f,
             animationSpec = tween(300)
         )
 
-        Spacer(Modifier.height(2.dp)) // 细间距
+        val offsetX by animateFloatAsState(
+            targetValue = if (isRemoving) 200f else if (enterDone) 0f else 200f,
+            animationSpec = tween(300)
+        )
+
+        /* 真正移除 */
+        LaunchedEffect(alpha) {
+            if (alpha == 0f && isRemoving) onRemove()
+        }
 
         Box(
             modifier = Modifier
+                .offset(x = offsetX.dp)
                 .alpha(alpha)
                 .wrapContentSize()
-                .drawWithCache {
-                    val colorPos = (phase + index * 0.7f / total) % 1f
-                    val color = smoothGradient(colorPos)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Canvas(Modifier.size(widthDp, heightDp)) {
+                val colorPos = (phase + index * 0.7f / max(total, 1)) % 1f
+                val color = smoothColor(colorPos)
 
-                    onDrawBehind {
-                        // 发光：先画 3 次模糊底
-                        val glowPaint = Paint().apply {
-                            this.color = color
-                            blurRadius = glowRadius
+                /* 发光层 ×3 */
+                repeat(3) {
+                    drawIntoCanvas { canvas ->
+                        val paint = android.graphics.Paint().apply {
+                            this.color = color.toArgb()
+                            textSize = style.fontSize.toPx()
+                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                            isAntiAlias = true
+                            maskFilter = BlurMaskFilter(glowRadiusPx, BlurMaskFilter.Blur.SOLID)
                         }
-                        repeat(3) {
-                            drawIntoCanvas { canvas ->
-                                val nativePaint = (glowPaint.asFrameworkPaint()).apply {
-                                    maskFilter = BlurMaskFilter(
-                                        glowRadius,
-                                        BlurMaskFilter.Blur.SOLID
-                                    )
-                                }
-                                canvas.nativeCanvas.drawText(
-                                    text,
-                                    paddingH,
-                                    paddingV + measured.size.height / 2f + measured.firstBaseline,
-                                    nativePaint
-                                )
-                            }
-                        }
-
-                        // 实体文字
-                        drawText(
-                            textMeasurer,
+                        canvas.nativeCanvas.drawText(
                             text,
-                            topLeft = Offset(paddingH, paddingV),
-                            style = style.copy(color = color)
+                            0f,
+                            layout.firstBaseline,
+                            paint
                         )
                     }
                 }
-        ) {
-            // 占位尺寸
-            Spacer(
-                Modifier.size(
-                    width = (measured.size.width + paddingH * 2).toDp(density),
-                    height = (measured.size.height + paddingV * 2).toDp(density)
-                )
-            )
-        }
 
-        if (isRemoving.value && alpha == 0f) {
-            moduleState.removeModule(module.name)
+                /* 实体文字 */
+                drawText(
+                    textMeasurer,
+                    text,
+                    topLeft = Offset.Zero,
+                    style = style.copy(color = color)
+                )
+            }
         }
     }
 
-    /* ---------------- 工具函数 ---------------- */
+    /* -------------------- Gradient Helper -------------------- */
 
-    private fun smoothGradient(position: Float): Color {
-        val colors = listOf(
-            Color.Red,
-            Color(0xFFFF4500),
-            Color.Yellow,
-            Color.Green,
-            Color.Cyan,
-            Color.Blue,
-            Color.Magenta,
-            Color(0xFFFF69B4)
+    private fun smoothColor(position: Float): Color {
+        val hsvList = listOf(
+            floatArrayOf(0f, 1f, 1f),
+            floatArrayOf(15f, 1f, 1f),
+            floatArrayOf(30f, 1f, 1f),
+            floatArrayOf(45f, 1f, 1f),
+            floatArrayOf(60f, 1f, 1f),
+            floatArrayOf(75f, 1f, 1f),
+            floatArrayOf(90f, 1f, 1f),
+            floatArrayOf(105f, 1f, 1f),
+            floatArrayOf(120f, 1f, 1f),
+            floatArrayOf(135f, 1f, 1f),
+            floatArrayOf(150f, 1f, 1f),
+            floatArrayOf(165f, 1f, 1f),
+            floatArrayOf(180f, 1f, 1f),
+            floatArrayOf(195f, 1f, 1f),
+            floatArrayOf(210f, 1f, 1f),
+            floatArrayOf(225f, 1f, 1f),
+            floatArrayOf(240f, 1f, 1f),
+            floatArrayOf(255f, 1f, 1f),
+            floatArrayOf(270f, 1f, 1f),
+            floatArrayOf(285f, 1f, 1f),
+            floatArrayOf(300f, 1f, 1f),
+            floatArrayOf(315f, 1f, 1f),
+            floatArrayOf(330f, 1f, 1f),
+            floatArrayOf(345f, 1f, 1f)
         )
-        val len = colors.size
+
+        val len = hsvList.size
         val pos = (position % 1f).coerceIn(0f, 1f)
         val scaled = pos * (len - 1)
         val idx = scaled.toInt()
         val fract = scaled - idx
-        val c1 = colors[idx % len]
-        val c2 = colors[(idx + 1) % len]
-        return lerp(c1, c2, fract)
-    }
 
-    private fun lerp(a: Color, b: Color, t: Float): Color {
-        return Color(
-            red = a.red + t * (b.red - a.red),
-            green = a.green + t * (b.green - a.green),
-            blue = a.blue + t * (b.blue - a.blue),
-            alpha = 1f
-        )
-    }
+        val hsv1 = hsvList[idx % len]
+        val hsv2 = hsvList[(idx + 1) % len]
 
-    private fun Float.toDp(density: Density): Dp = (this / density.density).dp
+        val hue1 = hsv1[0]
+        val hue2 = hsv2[0]
+        val hueDiff = hue2 - hue1
+        val hue = when {
+            hueDiff > 180 -> hue1 + fract * (hue2 - 360 - hue1)
+            hueDiff < -180 -> hue1 + fract * (hue2 + 360 - hue1)
+            else -> hue1 + fract * hueDiff
+        }.let { (it + 360) % 360 }
+
+        val sat = hsv1[1] + fract * (hsv2[1] - hsv1[1])
+        val value = hsv1[2] + fract * (hsv2[2] - hsv1[2])
+
+        return Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, value)))
+    }
 }
+
+/* -------------------- State -------------------- */
+
+class ModuleState {
+    private val _modules = mutableStateListOf<ModuleItem>()
+    val modules: List<ModuleItem> get() = _modules.toList()
+
+    private var nextId = 0
+    private val _modulesToRemove = mutableStateListOf<String>()
+    val modulesToRemove: List<String> get() = _modulesToRemove.toList()
+
+    fun addModule(name: String) {
+        if (_modules.none { it.name == name }) {
+            _modules.add(ModuleItem(nextId++, name))
+            _modulesToRemove.remove(name)
+        }
+    }
+
+    fun markForRemoval(name: String) {
+        if (!_modulesToRemove.contains(name)) _modulesToRemove.add(name)
+    }
+
+    fun removeModule(name: String) {
+        _modules.removeAll { it.name == name }
+        _modulesToRemove.remove(name)
+    }
+}
+
+data class ModuleItem(val id: Int, val name: String)
