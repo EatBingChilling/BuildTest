@@ -46,6 +46,7 @@ class OverlayModuleList : OverlayWindow() {
         private val overlayInstance by lazy { OverlayModuleList() }
         private var shouldShowOverlay = false
 
+        /* 主业务方法 */
         fun showText(name: String) {
             if (shouldShowOverlay) {
                 moduleState.addModule(name)
@@ -64,7 +65,7 @@ class OverlayModuleList : OverlayWindow() {
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
-        /* 向下兼容空壳 */
+        /* 向下兼容空壳，防止外部旧代码报错 */
         @Suppress("unused")
         fun setCapitalizeAndMerge(enabled: Boolean) = Unit
 
@@ -88,7 +89,7 @@ class OverlayModuleList : OverlayWindow() {
         val style = TextStyle(fontSize = 13.sp)
         val tm = rememberTextMeasurer()
 
-        /* 先测宽度，再按宽度降序排列 */
+        /* 先测宽度再排序，确保"最长在上" */
         val sorted = remember(moduleState.modules) {
             moduleState.modules
                 .map { it to tm.measure(it.name, style).size.width }
@@ -99,9 +100,9 @@ class OverlayModuleList : OverlayWindow() {
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(top = 8.dp, end = 3.dp),
+                .padding(top = 4.dp, end = 2.dp), // 减少外边距
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.Top   // 0 dp 行距
+            verticalArrangement = Arrangement.spacedBy(1.dp) // 减少行间距
         ) {
             sorted.forEachIndexed { idx, item ->
                 key(item.id) {
@@ -118,7 +119,7 @@ class OverlayModuleList : OverlayWindow() {
         }
     }
 
-    /* -------------------- 仅发光阴影（0 行距） -------------------- */
+    /* -------------------- 仅发光阴影 -------------------- */
 
     @Composable
     private fun GlowOnlyRow(
@@ -130,7 +131,8 @@ class OverlayModuleList : OverlayWindow() {
         onRemove: () -> Unit
     ) {
         val density = LocalDensity.current
-        val glowPx = with(density) { 10.dp.toPx() }
+        val glowPx = with(density) { 8.dp.toPx() } // 减少发光半径
+        val padding = with(density) { 6.dp.toPx() } // 减少内边距
 
         val tm = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
@@ -153,19 +155,20 @@ class OverlayModuleList : OverlayWindow() {
         val colorPos = (phase + yRatio * 0.7f) % 1f
         val color = smoothColor(colorPos)
 
-        /* 紧贴文字，无纵向 padding */
         Box(
             modifier = Modifier
                 .offset(x = offsetX.dp)
                 .alpha(alpha)
-                .wrapContentSize()
+                .padding(horizontal = 4.dp, vertical = 2.dp) // 减少Box的内边距
         ) {
             Canvas(
-                Modifier.wrapContentSize()
+                Modifier.size(
+                    width = with(density) { (layout.size.width + padding * 2).toDp() },
+                    height = with(density) { (layout.size.height + padding * 2).toDp() }
+                )
             ) {
-                val x = 0f
-                val y = layout.firstBaseline
-
+                val x = padding
+                val y = padding + layout.firstBaseline
                 repeat(3) {
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
