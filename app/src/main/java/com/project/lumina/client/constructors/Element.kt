@@ -55,37 +55,38 @@ abstract class Element(
     }
 
     /* ========= 以下两行必须加 override ========= */
-    override fun toJson(): JsonObject = buildJsonObject {
-        put("state", isEnabled)
-        put("values", buildJsonObject {
-            values.forEach { value ->
-                val key = if (value.name.isNotEmpty()) value.name else value.nameResId.toString()
-                put(key, value.toJson())
-            }
+    override fun toJson(): JsonElement = buildJsonObject {
+    put("state", isEnabled)
+    put("values", buildJsonObject {
+        values.forEach { value ->
+            val key = if (value.name.isNotEmpty()) value.name else value.nameResId.toString()
+            put(key, value.toJson())
+        }
+    })
+    if (isShortcutDisplayed) {
+        put("shortcut", buildJsonObject {
+            put("x", shortcutX)
+            put("y", shortcutY)
         })
-        if (isShortcutDisplayed) {
-            put("shortcut", buildJsonObject {
-                put("x", shortcutX)
-                put("y", shortcutY)
-            })
-        }
     }
+}
 
-    override fun fromJson(jsonElement: JsonElement) {
-        if (jsonElement !is JsonObject) return
-        isEnabled = (jsonElement["state"] as? JsonPrimitive)?.boolean ?: isEnabled
-        (jsonElement["values"] as? JsonObject)?.let { obj ->
-            obj.forEach { (key, value) ->
-                val v = getValue(key) ?: values.find { it.nameResId.toString() == key }
-                v?.runCatching { fromJson(value) } ?: v?.reset()
-            }
-        }
-        (jsonElement["shortcut"] as? JsonObject)?.let {
-            shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
-            shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
-            isShortcutDisplayed = true
+override fun fromJson(json: JsonElement) {
+    if (json !is JsonObject) return
+    isEnabled = (json["state"] as? JsonPrimitive)?.boolean ?: isEnabled
+    (json["values"] as? JsonObject)?.let { obj ->
+        obj.forEach { (key, value) ->
+            val v = getValue(key) ?: values.find { it.nameResId.toString() == key }
+            v?.runCatching { fromJson(value) } ?: v?.reset()
         }
     }
+    (json["shortcut"] as? JsonObject)?.let {
+        shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
+        shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
+        isShortcutDisplayed = true
+    }
+}
+
 
     /* ========= 通知：使用双参数扩展接口 ========= */
     private fun sendToggleMessage(enabled: Boolean) {
