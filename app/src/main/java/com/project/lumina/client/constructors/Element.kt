@@ -55,37 +55,48 @@ abstract class Element(
     }
 
     /* ========= 以下两行必须加 override ========= */
-    override fun toJson(): JsonElement = buildJsonObject {
-    put("state", isEnabled)
-    put("values", buildJsonObject {
-        values.forEach { value ->
-            val key = if (value.name.isNotEmpty()) value.name else value.nameResId.toString()
-            put(key, value.toJson())
-        }
-    })
-    if (isShortcutDisplayed) {
-        put("shortcut", buildJsonObject {
-            put("x", shortcutX)
-            put("y", shortcutY)
+    open fun toJson() = buildJsonObject {
+        put("state", isEnabled)
+        put("values", buildJsonObject {
+            values.forEach { value ->
+                val key = if (value.name.isNotEmpty()) value.name else value.nameResId.toString()
+                put(key, value.toJson())
+            }
         })
-    }
-}
-
-override fun fromJson(json: JsonElement) {
-    if (json !is JsonObject) return
-    isEnabled = (json["state"] as? JsonPrimitive)?.boolean ?: isEnabled
-    (json["values"] as? JsonObject)?.let { obj ->
-        obj.forEach { (key, value) ->
-            val v = getValue(key) ?: values.find { it.nameResId.toString() == key }
-            v?.runCatching { fromJson(value) } ?: v?.reset()
+        if (isShortcutDisplayed) {
+            put("shortcut", buildJsonObject {
+                put("x", shortcutX)
+                put("y", shortcutY)
+            })
         }
     }
-    (json["shortcut"] as? JsonObject)?.let {
-        shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
-        shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
-        isShortcutDisplayed = true
+
+    open fun fromJson(jsonElement: JsonElement) {
+        if (jsonElement is JsonObject) {
+            isEnabled = (jsonElement["state"] as? JsonPrimitive)?.boolean ?: isEnabled
+            (jsonElement["values"] as? JsonObject)?.let {
+                it.forEach { jsonObject ->
+                    val value = getValue(jsonObject.key)
+                        ?: if (jsonObject.key.toIntOrNull() != null) {
+                            values.find { it.nameResId == jsonObject.key.toInt() }
+                        } else null
+
+                    value?.let { v ->
+                        try {
+                            v.fromJson(jsonObject.value)
+                        } catch (e: Throwable) {
+                            v.reset()
+                        }
+                    }
+                }
+            }
+            (jsonElement["shortcut"] as? JsonObject)?.let {
+                shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
+                shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
+                isShortcutDisplayed = true
+            }
+        }
     }
-}
 
 
     /* ========= 通知：使用双参数扩展接口 ========= */
