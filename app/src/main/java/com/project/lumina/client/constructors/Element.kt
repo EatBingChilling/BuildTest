@@ -22,7 +22,6 @@ abstract class Element(
 ) : InterruptiblePacketHandler, Configurable {
 
     open lateinit var session: NetBound
-
     private var _isEnabled by mutableStateOf(defaultEnabled)
 
     var isEnabled: Boolean
@@ -55,8 +54,8 @@ abstract class Element(
         sendToggleMessage(false)
     }
 
-    /* ========= JSON 保存/读取保持不变 ========= */
-    override fun toJson() = buildJsonObject {
+    /* ========= 以下两行必须加 override ========= */
+    override fun toJson(): JsonObject = buildJsonObject {
         put("state", isEnabled)
         put("values", buildJsonObject {
             values.forEach { value ->
@@ -88,18 +87,13 @@ abstract class Element(
         }
     }
 
-    /* ========= 通知相关：最小改动 ========= */
+    /* ========= 通知：使用双参数扩展接口 ========= */
     private fun sendToggleMessage(enabled: Boolean) {
         if (!isSessionCreated) return
         try {
-            /* 关键：根据 enabled 决定动作 */
             OverlayNotification.addNotification(name, enabled)
-            // 如果你仍需 OverlayModuleList 的文本提示，保留下面两行
-            if (enabled) {
-                OverlayModuleList.showText(name)
-            } else {
-                OverlayModuleList.removeText(name)
-            }
+            if (enabled) OverlayModuleList.showText(name)
+            else OverlayModuleList.removeText(name)
         } catch (e: Exception) {
             Log.w("AppCrashChan :3", "Failed to show module notification: ${e.message}")
         }
