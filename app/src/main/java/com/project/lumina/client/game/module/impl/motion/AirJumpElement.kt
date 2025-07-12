@@ -16,9 +16,11 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
     iconResId,
     displayNameResId = AssetManager.getString("module_air_jump_display_name")
 ) {
-    private var jumpValue by floatValue("Jump",0.42f,0.1f..3f)
+    private var jumpValue by floatValue("Jump", 0.42f, 0.1f..3f)
     private var speedMultiplierValue by floatValue("SpeedMultiplier", 1f, 0.5f..3f)
     private var speedBoostValue by boolValue("Speed Boost", false)
+    
+    private var jumpTriggered = false
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
         if (!isEnabled) {
@@ -28,27 +30,31 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
         val packet = interceptablePacket.packet
 
         if (packet is PlayerAuthInputPacket) {
-            if (packet.inputData.contains(PlayerAuthInputData.JUMP_DOWN)) {
-                val player = session.localPlayer
-                if (!player.isOnGround ) {
-                    val motionPacket = SetEntityMotionPacket().apply {
-                        runtimeEntityId = player.runtimeEntityId
-                        motion = if (speedBoostValue) {
-                            Vector3f.from(
-                                player.motionX * speedMultiplierValue,
-                                jumpValue,
-                                player.motionZ * speedMultiplierValue
-                            )
-                        } else {
-                            Vector3f.from(
-                                player.motionX,
-                                jumpValue,
-                                player.motionZ
-                            )
-                        }
+            val isJumpPressed = packet.inputData.contains(PlayerAuthInputData.JUMP_DOWN)
+            val player = session.localPlayer
+
+            if (isJumpPressed && !jumpTriggered && !player.isOnGround) {
+                val motionPacket = SetEntityMotionPacket().apply {
+                    runtimeEntityId = player.runtimeEntityId
+                    motion = if (speedBoostValue) {
+                        Vector3f.from(
+                            player.motionX * speedMultiplierValue,
+                            jumpValue,
+                            player.motionZ * speedMultiplierValue
+                        )
+                    } else {
+                        Vector3f.from(
+                            player.motionX,
+                            jumpValue,
+                            player.motionZ
+                        )
                     }
-                    session.clientBound(motionPacket)
                 }
+                session.clientBound(motionPacket)
+                jumpTriggered = true
+            } 
+            else if (!isJumpPressed) {
+                jumpTriggered = false
             }
         }
     }
