@@ -46,28 +46,36 @@ class OverlayModuleList : OverlayWindow() {
     /* ======================================================================= */
 
     companion object {
-        private val moduleState = ModuleState()
-        private val overlayInstance by lazy { OverlayModuleList() }
-        private var shouldShowOverlay = false
+    private val moduleState = ModuleState()
+    private val overlayInstance by lazy { OverlayModuleList() }
+    private var shouldShowOverlay = false
 
-        fun showText(name: String) {
-            if (shouldShowOverlay) {
-                moduleState.addModule(name)
-                kotlin.runCatching { OverlayManager.showOverlayWindow(overlayInstance) }
-            }
+    fun showText(name: String) {
+        if (shouldShowOverlay) {
+            moduleState.addModule(name)
+            kotlin.runCatching { OverlayManager.showOverlayWindow(overlayInstance) }
         }
-
-        fun removeText(name: String) {
-            moduleState.markForRemoval(name)
-        }
-
-        fun setOverlayEnabled(enabled: Boolean) {
-            shouldShowOverlay = enabled
-            if (!enabled) kotlin.runCatching { OverlayManager.dismissOverlayWindow(overlayInstance) }
-        }
-
-        fun isOverlayEnabled(): Boolean = shouldShowOverlay
     }
+
+    fun removeText(name: String) {
+        moduleState.markForRemoval(name)
+    }
+
+    fun setOverlayEnabled(enabled: Boolean) {
+        shouldShowOverlay = enabled
+        if (!enabled) kotlin.runCatching { OverlayManager.dismissOverlayWindow(overlayInstance) }
+    }
+
+    fun isOverlayEnabled(): Boolean = shouldShowOverlay
+
+    /* ↓↓↓ 向下兼容 ↓↓↓ */
+    @Suppress("unused")
+    fun setCapitalizeAndMerge(enabled: Boolean) = Unit
+
+    @Suppress("unused")
+    fun setDisplayMode(mode: String) = Unit
+}
+
 
     /* ======================================================================= */
     /*  Compose UI                                                               */
