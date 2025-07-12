@@ -30,6 +30,7 @@ import com.project.lumina.client.game.module.impl.world.FollowBotElement
 import com.project.lumina.client.game.module.impl.motion.FullStopElement
 import com.project.lumina.client.game.module.impl.motion.GlideElement
 import com.project.lumina.client.game.module.impl.motion.HighJumpElement
+import com.project.lumina.client.game.module.impl.combat.AntiBotElement
 import com.project.lumina.client.game.module.impl.world.JesusElement
 import com.project.lumina.client.game.module.impl.motion.JetPackElement
 //import com.project.lumina.client.game.module.impl.combat.CrystalAuraElement
@@ -85,6 +86,7 @@ object RemModuleManager {
             add(FreeCameraElement())
             add(KillauraElement())
             add(KillauraABElement())
+            add(AntiBotElement())
             add(GlideElement())
             add(StepElement())
             add(LongJumpElement())

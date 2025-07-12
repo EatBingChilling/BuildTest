@@ -30,6 +30,7 @@ import com.project.lumina.client.game.module.impl.motion.AntiAFKElement
 import com.project.lumina.client.game.module.impl.world.AutoWalkElement
 import com.project.lumina.client.game.module.impl.motion.BhopElement
 //import com.project.lumina.client.game.module.impl.combat.CrystalAuraElement
+import com.project.lumina.client.game.module.impl.combat.AntiBotElement
 import com.project.lumina.client.game.module.impl.combat.DamageBoostElement
 import com.project.lumina.client.game.module.impl.combat.HitboxElement
 import com.project.lumina.client.game.module.impl.motion.FlyElement
@@ -120,6 +121,7 @@ object GameManager {
             add(ReachElement())
             //add(MaceAuraElement())
             //add(CrystalAuraElement())
+            add(AntiBotElement())
             add(TriggerBotElement())
             add(CritBotElement())
             add(InfiniteAuraElement())
