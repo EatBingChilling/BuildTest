@@ -6,6 +6,7 @@ import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.game.entity.Player
 import com.project.lumina.client.game.entity.LocalPlayer
 import com.project.lumina.client.util.AssetManager
+import com.project.lumina.client.game.InterceptablePacket
 
 class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_ghost_black_24dp")) : Element(
     name = "AntiBot",
@@ -28,5 +29,8 @@ class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_ghost_black_24dp
             }
             else -> false
         }
+    }
+    override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
+        
     }
 }
