@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -36,8 +35,8 @@ class OverlayModuleList : OverlayWindow() {
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
             gravity = Gravity.TOP or Gravity.END
-            x = 10
-            y = 5
+            x = 3 
+            y = 2
         }
     }
 
@@ -73,7 +72,6 @@ class OverlayModuleList : OverlayWindow() {
                 try {
                     OverlayManager.showOverlayWindow(overlayInstance)
                 } catch (e: Exception) {
-                    // Ignore
                 }
             }
         }
@@ -88,7 +86,6 @@ class OverlayModuleList : OverlayWindow() {
                 try {
                     OverlayManager.dismissOverlayWindow(overlayInstance)
                 } catch (e: Exception) {
-                    // Ignore
                 }
             }
         }
@@ -114,10 +111,11 @@ class OverlayModuleList : OverlayWindow() {
 
         Column(
             modifier = Modifier
-                .fillMaxHeight()
+                .wrapContentHeight()
                 .wrapContentWidth()
-                .padding(8.dp)
-                .alpha(overlayAlpha),
+                .padding(top = 8.dp, bottom = 8.dp, end = 0.dp)  
+                .alpha(overlayAlpha)
+                .background(Color.Transparent),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -212,7 +210,7 @@ class OverlayModuleList : OverlayWindow() {
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .padding(horizontal = 8.dp, vertical = 4.dp)
-                    .weight(1f)
+                    .wrapContentWidth()
             )
 
             Box(
