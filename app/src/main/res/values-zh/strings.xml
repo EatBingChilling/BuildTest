@@ -53,9 +53,9 @@
     <string name="teleport_behind">传送至身后</string>
     <string name="tp_speed">传送速度</string>
     <string name="keep_distance">保持距离</string>
-    <string name="strafe_angle">扫射角度</string>
-    <string name="strafe_speed">扫射速度</string>
-    <string name="strafe_radius">扫射半径</string>
+    <string name="strafe_angle">环绕角度</string>
+    <string name="strafe_speed">环绕速度</string>
+    <string name="strafe_radius">环绕半径</string>
     <string name="module_anti_crystal">防水晶</string>
     <string name="module_air_jump">空中跳跃</string>
     <string name="module_instant_health">瞬间治疗</string>
@@ -88,7 +88,7 @@
     <string name="module_levitation">漂浮</string>
     <string name="module_poseidon">水能提升</string>
     <string name="module_regeneration">再生</string>
-    <string name="module_bhop">连跳</string>
+    <string name="module_bhop">兔子跳</string>
     <string name="module_sprint">疾跑</string>
     <string name="module_desync">停止发包</string>
     <string name="module_killaura">杀戮光环</string>
@@ -142,7 +142,7 @@
     <string name="module_air_jump_display_name">空中跳跃</string>
     <string name="module_anti_afk_display_name">防挂机</string>
     <string name="module_auto_walk_display_name">自动行走</string>
-    <string name="module_bhop_display_name">连跳</string>
+    <string name="module_bhop_display_name">兔子跳</string>
     <string name="module_fly_display_name">飞行</string>
     <string name="module_high_jump_display_name">跳高</string>
     <string name="module_jet_pack_display_name">喷气背包</string>
@@ -158,7 +158,7 @@
     <string name="module_spider_display_name">爬墙</string>
     <string name="module_jesus_display_name">上帝</string>
     <string name="module_tpaura_display_name">传送光环</string>
-    <string name="module_strafe_display_name">扫射</string>
+    <string name="module_strafe_display_name">环绕</string>
     <string name="module_faststop_display_name">快速停止</string>
     <string name="module_jitterfly_display_name">抖动飞行</string>
     <string name="module_phase_display_name">穿墙</string>

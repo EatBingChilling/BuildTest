@@ -16,6 +16,9 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
     iconResId,
     displayNameResId = AssetManager.getString("module_air_jump_display_name")
 ) {
+    private var jumpValue by floatValue("Jump",0.42f,0.1f..3f)
+    private var speedMultiplierValue by floatValue("SpeedMultiplier", 1f, 0.5f..3f)
+    private var speedBoostValue by boolValue("Speed Boost", false)
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
         if (!isEnabled) {
@@ -26,15 +29,26 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
 
         if (packet is PlayerAuthInputPacket) {
             if (packet.inputData.contains(PlayerAuthInputData.JUMP_DOWN)) {
-                val motionPacket = SetEntityMotionPacket().apply {
-                    runtimeEntityId = session.localPlayer.runtimeEntityId
-                    motion = Vector3f.from(
-                        session.localPlayer.motionX,
-                        0.42f,
-                        session.localPlayer.motionZ
-                    )
+                val player = session.localPlayer
+                if (!player.isOnGround ) {
+                    val motionPacket = SetEntityMotionPacket().apply {
+                        runtimeEntityId = player.runtimeEntityId
+                        motion = if (speedBoostValue) {
+                            Vector3f.from(
+                                player.motionX * speedMultiplierValue,
+                                jumpValue,
+                                player.motionZ * speedMultiplierValue
+                            )
+                        } else {
+                            Vector3f.from(
+                                player.motionX,
+                                jumpValue,
+                                player.motionZ
+                            )
+                        }
+                    }
+                    session.clientBound(motionPacket)
                 }
-                session.clientBound(motionPacket)
             }
         }
     }

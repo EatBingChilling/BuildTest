@@ -100,7 +100,7 @@ class OverlayModuleList : OverlayWindow() {
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(top = 4.dp, end = 2.dp),
+                .padding(top = 4.dp, end = 4.dp), // 👈 距离屏幕最右侧 4dp
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
@@ -132,7 +132,6 @@ class OverlayModuleList : OverlayWindow() {
     ) {
         val density = LocalDensity.current
         val glowPx = with(density) { 8.dp.toPx() }
-        // 只留 1 dp 安全边，避免文字贴边
         val paddingH = with(density) { 1.dp.toPx() }
         val paddingV = with(density) { 1.dp.toPx() }
 
@@ -161,7 +160,6 @@ class OverlayModuleList : OverlayWindow() {
             modifier = Modifier
                 .offset(x = offsetX.dp)
                 .alpha(alpha)
-                // 水平 1.dp 外部边距，垂直 1.dp
                 .padding(horizontal = 1.dp, vertical = 1.dp)
         ) {
             Canvas(
