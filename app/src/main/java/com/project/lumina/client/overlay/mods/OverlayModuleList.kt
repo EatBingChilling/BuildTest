@@ -100,7 +100,7 @@ class OverlayModuleList : OverlayWindow() {
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(top = 4.dp, end = 4.dp), // 👈 距离屏幕最右侧 4dp
+                .padding(top = 4.dp, end = 8.dp), // 👈 距离屏幕最右侧 4dp
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
