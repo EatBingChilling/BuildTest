@@ -19,7 +19,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.*
-
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
@@ -42,16 +41,12 @@ class OverlayModuleList : OverlayWindow() {
 
     override val layoutParams: WindowManager.LayoutParams get() = _layoutParams
 
-    /* ======================================================================= */
-    /*  对外静态接口                                                             */
-    /* ======================================================================= */
-
     companion object {
         private val moduleState = ModuleState()
         private val overlayInstance by lazy { OverlayModuleList() }
         private var shouldShowOverlay = false
 
-        /* 真正用到的四个方法 */
+        /* 业务接口 */
         fun showText(name: String) {
             if (shouldShowOverlay) {
                 moduleState.addModule(name)
@@ -70,22 +65,25 @@ class OverlayModuleList : OverlayWindow() {
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
-        /* 向下兼容空壳，防止 NetBound.kt 编译报错 */
-        @Suppress("unused")
-        fun setCapitalizeAndMerge(enabled: Boolean) = Unit
-
-        @Suppress("unused")
-        fun setDisplayMode(mode: String) = Unit
+        /* 向下兼容空壳，防止外部调用报错 */
+        @Suppress("unused") fun setCapitalizeAndMerge(enabled: Boolean) = Unit
+        @Suppress("unused") fun setDisplayMode(mode: String) = Unit
     }
 
-    /* ======================================================================= */
-    /*  Compose UI                                                              */
-    /* ======================================================================= */
+    /* --------------------------------------------------------------------- */
 
     @Composable
     override fun Content() {
         if (!isOverlayEnabled()) return
 
+        /* 统一彩虹流动 */
+        val infinite = rememberInfiniteTransition()
+        val phase by infinite.animateFloat(
+            0f, 1f,
+            infiniteRepeatable(tween(5000, easing = LinearEasing))
+        )
+
+        /* 按文字长度降序排序 */
         val sorted = remember(moduleState.modules) {
             moduleState.modules.sortedByDescending { it.name.length }
         }
@@ -99,8 +97,9 @@ class OverlayModuleList : OverlayWindow() {
         ) {
             sorted.forEachIndexed { idx, item ->
                 key(item.id) {
-                    NeonTextRow(
+                    RainbowTextRow(
                         text = item.name,
+                        phase = phase,              // 共用同一 phase
                         index = idx,
                         total = sorted.size,
                         isRemoving = moduleState.modulesToRemove.contains(item.name),
@@ -111,11 +110,12 @@ class OverlayModuleList : OverlayWindow() {
         }
     }
 
-    /* -------------------- 单行 Neon 绘制 -------------------- */
+    /* -------------------- 单行绘制 -------------------- */
 
     @Composable
-    private fun NeonTextRow(
+    private fun RainbowTextRow(
         text: String,
+        phase: Float,
         index: Int,
         total: Int,
         isRemoving: Boolean,
@@ -124,38 +124,25 @@ class OverlayModuleList : OverlayWindow() {
         val density = LocalDensity.current
         val glowPx = with(density) { 10.dp.toPx() }
 
-        /* 颜色流动 5s */
-        val infinite = rememberInfiniteTransition()
-        val phase by infinite.animateFloat(
-            0f, 1f,
-            infiniteRepeatable(tween(5000, easing = LinearEasing))
-        )
-
         val tm = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
         val layout = remember(text) { tm.measure(text, style) }
 
         /* 进入/退出动画 */
         var enterDone by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) {
-            delay(index * 50L)
-            enterDone = true
-        }
+        LaunchedEffect(Unit) { delay(index * 50L); enterDone = true }
 
         val alpha by animateFloatAsState(
             targetValue = if (isRemoving || !enterDone) 0f else 1f,
             animationSpec = tween(300)
         )
-
         val offsetX by animateFloatAsState(
             targetValue = if (isRemoving) 200f else 0f,
             animationSpec = tween(300)
         )
 
-        /* 真正移除 */
-        LaunchedEffect(alpha) {
-            if (alpha == 0f && isRemoving) onRemove()
-        }
+        /* 移除时机 */
+        LaunchedEffect(alpha) { if (alpha == 0f && isRemoving) onRemove() }
 
         Box(
             modifier = Modifier
@@ -164,7 +151,9 @@ class OverlayModuleList : OverlayWindow() {
                 .wrapContentSize()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            val colorPos = (phase + index * 0.7f / max(total, 1)) % 1f
+            /* 计算整屏彩虹位置 */
+            val yRatio = index.toFloat() / max(total - 1, 1)
+            val colorPos = (phase + yRatio * 0.7f) % 1f
             val color = smoothColor(colorPos)
 
             Canvas(
@@ -203,7 +192,7 @@ class OverlayModuleList : OverlayWindow() {
         }
     }
 
-    /* -------------------- 颜色插值 -------------------- */
+    /* -------------------- HSV 彩虹插值 -------------------- */
 
     private fun smoothColor(position: Float): Color {
         val hsvSteps = listOf(
@@ -232,6 +221,7 @@ class OverlayModuleList : OverlayWindow() {
             floatArrayOf(330f, 1f, 1f),
             floatArrayOf(345f, 1f, 1f)
         )
+
         val len = hsvSteps.size
         val pos = (position % 1f).coerceIn(0f, 1f)
         val scaled = pos * (len - 1)
