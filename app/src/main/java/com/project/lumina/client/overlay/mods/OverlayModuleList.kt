@@ -100,9 +100,9 @@ class OverlayModuleList : OverlayWindow() {
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(top = 4.dp, end = 2.dp), // 减少外边距
+                .padding(top = 4.dp, end = 2.dp),
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(1.dp) // 减少行间距
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             sorted.forEachIndexed { idx, item ->
                 key(item.id) {
@@ -131,8 +131,10 @@ class OverlayModuleList : OverlayWindow() {
         onRemove: () -> Unit
     ) {
         val density = LocalDensity.current
-        val glowPx = with(density) { 8.dp.toPx() } // 减少发光半径
-        val padding = with(density) { 6.dp.toPx() } // 减少内边距
+        val glowPx = with(density) { 8.dp.toPx() }
+        // 只留 1 dp 安全边，避免文字贴边
+        val paddingH = with(density) { 1.dp.toPx() }
+        val paddingV = with(density) { 1.dp.toPx() }
 
         val tm = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
@@ -159,16 +161,17 @@ class OverlayModuleList : OverlayWindow() {
             modifier = Modifier
                 .offset(x = offsetX.dp)
                 .alpha(alpha)
-                .padding(horizontal = 4.dp, vertical = 2.dp) // 减少Box的内边距
+                // 水平 1.dp 外部边距，垂直 1.dp
+                .padding(horizontal = 1.dp, vertical = 1.dp)
         ) {
             Canvas(
                 Modifier.size(
-                    width = with(density) { (layout.size.width + padding * 2).toDp() },
-                    height = with(density) { (layout.size.height + padding * 2).toDp() }
+                    width = with(density) { (layout.size.width + paddingH * 2).toDp() },
+                    height = with(density) { (layout.size.height + paddingV * 2).toDp() }
                 )
             ) {
-                val x = padding
-                val y = padding + layout.firstBaseline
+                val x = paddingH
+                val y = paddingV + layout.firstBaseline
                 repeat(3) {
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
