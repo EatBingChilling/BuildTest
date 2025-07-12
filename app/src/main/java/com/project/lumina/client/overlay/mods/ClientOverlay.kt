@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,9 +34,10 @@ class ClientOverlay : OverlayWindow() {
     private var watermarkText by mutableStateOf(prefs.getString("text", "") ?: "")
     private var textColor by mutableStateOf(prefs.getInt("color", Color.WHITE))
     private var shadowEnabled by mutableStateOf(prefs.getBoolean("shadow", false))
-    // 字体范围扩大到5-300sp
-    private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300)) 
+    private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
     private var rainbowEnabled by mutableStateOf(prefs.getBoolean("rainbow", false))
+    private var alphaValue by mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
+    private var useUnifont by mutableStateOf(prefs.getBoolean("use_unifont", true))
 
     private val _layoutParams by lazy {
         super.layoutParams.apply {
@@ -107,11 +107,11 @@ class ClientOverlay : OverlayWindow() {
         val seekGreen = dialogView.findViewById<SeekBar>(R.id.seekGreen)
         val seekBlue = dialogView.findViewById<SeekBar>(R.id.seekBlue)
         val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
-        // 字体大小范围扩大到5-300sp
-        val seekSize = dialogView.findViewById<SeekBar>(R.id.seekSize).apply {
-            max = 295 // 300 - 5 = 295
-        }
+        val seekSize = dialogView.findViewById<SeekBar>(R.id.seekSize).apply { max = 295 }
         val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
+        val seekAlpha = dialogView.findViewById<SeekBar>(R.id.seekAlpha).apply { max = 100 }
+        val textAlpha = dialogView.findViewById<TextView>(R.id.textAlpha)
+        val switchUseUnifont = dialogView.findViewById<Switch>(R.id.switchUseUnifont)
         val colorPreview = dialogView.findViewById<TextView>(R.id.colorPreview)
 
         editText.setText(watermarkText)
@@ -119,9 +119,11 @@ class ClientOverlay : OverlayWindow() {
         seekGreen.progress = Color.green(textColor)
         seekBlue.progress = Color.blue(textColor)
         switchShadow.isChecked = shadowEnabled
-        // 映射字体大小到控件范围
         seekSize.progress = fontSize - 5
         switchRainbow.isChecked = rainbowEnabled
+        seekAlpha.progress = alphaValue
+        textAlpha.text = "透明度: $alphaValue%"
+        switchUseUnifont.isChecked = useUnifont
 
         fun updateColorPreview() {
             val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
@@ -157,6 +159,16 @@ class ClientOverlay : OverlayWindow() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        seekAlpha.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                alphaValue = progress
+                textAlpha.text = "透明度: $progress%"
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
         val dialog = AlertDialog.Builder(appContext)
             .setTitle("配置水印")
             .setView(dialogView)
@@ -167,9 +179,10 @@ class ClientOverlay : OverlayWindow() {
                 val blue = seekBlue.progress
                 textColor = Color.rgb(red, green, blue)
                 shadowEnabled = switchShadow.isChecked
-                // 反映射字体大小到实际值 (5-300sp)
                 fontSize = seekSize.progress + 5
                 rainbowEnabled = switchRainbow.isChecked
+                alphaValue = seekAlpha.progress
+                useUnifont = switchUseUnifont.isChecked
 
                 prefs.edit()
                     .putString("text", watermarkText)
@@ -177,6 +190,8 @@ class ClientOverlay : OverlayWindow() {
                     .putBoolean("shadow", shadowEnabled)
                     .putInt("size", fontSize)
                     .putBoolean("rainbow", rainbowEnabled)
+                    .putInt("alpha", alphaValue)
+                    .putBoolean("use_unifont", useUnifont)
                     .apply()
             }
             .setNegativeButton("取消", null)
@@ -187,67 +202,60 @@ class ClientOverlay : OverlayWindow() {
     }
 
     @Composable
-override fun Content() {
-    if (!isOverlayEnabled()) return
+    override fun Content() {
+        if (!isOverlayEnabled()) return
 
-    // 修复字体问题
-    val unifontFamily = FontFamily(Font(R.font.unifont))
+        val fontFamily = if (useUnifont) {
+            FontFamily(Font(R.font.unifont))
+        } else {
+            FontFamily.Default
+        }
 
-    val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
+        val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
-    var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
+        var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
 
-    LaunchedEffect(rainbowEnabled) {
-        if (rainbowEnabled) {
-            while (true) {
-                val hue = (System.currentTimeMillis() % 3600L) / 10f
-                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
-                delay(50L)
+        LaunchedEffect(rainbowEnabled) {
+            if (rainbowEnabled) {
+                while (true) {
+                    val hue = (System.currentTimeMillis() % 3600L) / 10f
+                    rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
+                    delay(50L)
+                }
             }
         }
-    }
 
-    // 统一透明度设置（25%透明度）
-    val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
-    val finalColor = baseColor.copy(alpha = 0.25f)
+        val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
+        val finalColor = baseColor.copy(alpha = alphaValue / 100f)
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (shadowEnabled) {
-            // 使用轻量阴影效果（避免偏移导致居中问题）
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (shadowEnabled) {
+                Text(
+                    text = text,
+                    fontSize = fontSize.sp,
+                    fontFamily = fontFamily,
+                    color = ComposeColor.Black.copy(alpha = 0.15f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = (fontSize * 1.5).sp,
+                    letterSpacing = (fontSize * 0.1).sp,
+                    modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+                )
+            }
+
             Text(
                 text = text,
                 fontSize = fontSize.sp,
-                // 取消粗体
-                // fontWeight = FontWeight.Bold,
-                fontFamily = unifontFamily,
-                color = ComposeColor.Black.copy(alpha = 0.15f),
+                fontFamily = fontFamily,
+                color = finalColor,
                 textAlign = TextAlign.Center,
-                lineHeight = (fontSize * 1.5).sp, // 设置1.5倍行距
-                // 增加50%字间距
-                letterSpacing = (fontSize * 0.1).sp,
-                modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+                lineHeight = (fontSize * 1.2).sp,
+                letterSpacing = (fontSize * 0.1).sp
             )
         }
-
-        Text(
-            text = text,
-            fontSize = fontSize.sp,
-            // 取消粗体
-            // fontWeight = FontWeight.Bold,
-            fontFamily = unifontFamily,
-            color = finalColor,
-            textAlign = TextAlign.Center, // 确保文本居中
-            lineHeight = (fontSize * 1.2).sp, // 设置1.5倍行距
-            // 增加50%字间距
-            letterSpacing = (fontSize * 0.1).sp
-        )
     }
 }
-
-    }
-

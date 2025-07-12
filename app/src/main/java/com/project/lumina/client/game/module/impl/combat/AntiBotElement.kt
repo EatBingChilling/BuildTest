@@ -12,10 +12,10 @@ class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_ghost_black_24dp
     name = "AntiBot",
     category = CheatCategory.Combat,
     iconResId,
-    displayNameResId = AssetManager.getString("module_reach_display_name")
+    displayNameResId = AssetManager.getString("module_antibot_display_name")
 ) {
 
-    private var antiBotModeValue by intValue("Mode", 0, 0..1)
+    private var antiBotModeValue by intValue("模式", 0, 0..1)
 
     fun Player.isBot(): Boolean {
         if (this is LocalPlayer) return false

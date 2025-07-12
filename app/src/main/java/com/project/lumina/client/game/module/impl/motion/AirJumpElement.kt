@@ -15,11 +15,11 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
     iconResId,
     displayNameResId = AssetManager.getString("module_air_jump_display_name")
 ) {
-    private var mode by intValue("Mode", 0, 0..1)
+    private var mode by intValue("模式", 0, 0..1)
     
-    private var jumpValue by floatValue("Jump", 0.42f, 0.1f..3f)
-    private var speedMultiplierValue by floatValue("SpeedMultiplier", 1f, 0.5f..3f)
-    private var speedBoostValue by boolValue("Speed Boost", false)
+    private var jumpValue by floatValue("跳跃", 0.42f, 0.1f..3f)
+    private var speedMultiplierValue by floatValue("速度调整", 1f, 0.5f..3f)
+    private var speedBoostValue by boolValue("速度增益", false)
     private var jumpTriggered = false
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {

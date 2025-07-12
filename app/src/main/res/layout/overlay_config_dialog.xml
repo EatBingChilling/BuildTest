@@ -57,6 +57,31 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="彩虹色" />
+            
+            <TextView
+    android:text="透明度"
+    android:textSize="14sp"
+    android:layout_marginTop="8dp" />
+
+<SeekBar
+    android:id="@+id/seekAlpha"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:max="100" />
+
+<TextView
+    android:id="@+id/textAlpha"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="透明度: 25%" />
+
+<Switch
+    android:id="@+id/switchUseUnifont"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="使用像素字体"
+    android:layout_marginTop="8dp" />
+
 
         <TextView
             android:text="字体大小"
