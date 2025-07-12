@@ -31,17 +31,14 @@ import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-//叮咚鸡大狗叫
-
-
+/* ===============  入口：对外暴露的两个静态方法  =============== */
 class OverlayNotification : OverlayWindow() {
+
     private val _layoutParams by lazy {
         WindowManager.LayoutParams().apply {
             flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-
             type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
             gravity = Gravity.BOTTOM or Gravity.END
@@ -58,15 +55,24 @@ class OverlayNotification : OverlayWindow() {
         private val notificationState = NotificationState()
         private var isOverlayShowing = false
 
-        fun addNotification(moduleName: String) {
-            notificationState.addNotification(moduleName)
-            if (!isOverlayShowing) {
-                try {
-                    OverlayManager.showOverlayWindow(OverlayNotification())
-                    isOverlayShowing = true
-                } catch (e: Exception) {
-                    
-                }
+        /* 开启 */
+        fun onModuleEnabled(moduleName: String) {
+            notificationState.addNotification(moduleName, ModuleAction.ENABLE)
+            ensureOverlayVisible()
+        }
+
+        /* 关闭 */
+        fun onModuleDisabled(moduleName: String) {
+            notificationState.addNotification(moduleName, ModuleAction.DISABLE)
+            ensureOverlayVisible()
+        }
+
+        private fun ensureOverlayVisible() {
+            if (isOverlayShowing) return
+            try {
+                OverlayManager.showOverlayWindow(OverlayNotification())
+                isOverlayShowing = true
+            } catch (_: Exception) {
             }
         }
 
@@ -75,6 +81,7 @@ class OverlayNotification : OverlayWindow() {
         }
     }
 
+    /* -------------------- Compose UI -------------------- */
     @Composable
     override fun Content() {
         val notifications = notificationState.notifications
@@ -83,7 +90,7 @@ class OverlayNotification : OverlayWindow() {
             if (notifications.isEmpty()) {
                 delay(100)
                 OverlayManager.dismissOverlayWindow(this@OverlayNotification)
-                OverlayNotification.onOverlayDismissed()
+                onOverlayDismissed()
             }
         }
 
@@ -97,12 +104,12 @@ class OverlayNotification : OverlayWindow() {
                 modifier = Modifier
                     .wrapContentSize()
                     .padding(end = 20.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp), // 增加间距防止重叠
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.End
             ) {
-                notifications.forEach { notification ->
-                    key(notification.id) {
-                        NotificationCard(notification, notificationState)
+                notifications.forEach { item ->
+                    key(item.id) {
+                        NotificationCard(item, notificationState)
                     }
                 }
             }
@@ -110,66 +117,59 @@ class OverlayNotification : OverlayWindow() {
     }
 }
 
+/* ===============  单张卡片  =============== */
 @Composable
-fun NotificationCard(notification: NotificationItem, notificationState: NotificationState) {
+private fun NotificationCard(
+    item: NotificationItem,
+    state: NotificationState
+) {
     var visible by remember { mutableStateOf(false) }
     var exitState by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(key1 = notification.id) {
+    LaunchedEffect(item.id) {
         delay(50)
         visible = true
-        delay(2000) // 通知显示时长
+        delay(2000)
         exitState = true
-        delay(300) // 退出动画时长
-        notificationState.removeNotification(notification.id)
+        delay(300)
+        state.removeNotification(item.id)
     }
 
     val springSpec = spring<Float>(
         dampingRatio = Spring.DampingRatioMediumBouncy,
-        stiffness = Spring.StiffnessLow,
-        visibilityThreshold = 0.001f
+        stiffness = Spring.StiffnessLow
     )
 
     val offsetX by animateFloatAsState(
-        targetValue = when {
-            exitState -> 200f
-            visible -> 0f
-            else -> -200f
-        },
-        animationSpec = springSpec,
-        label = "offsetX"
+        if (exitState) 200f else if (visible) 0f else -200f,
+        springSpec
     )
-
     val scale by animateFloatAsState(
-        targetValue = when {
-            exitState -> 0.8f
-            visible -> 1f
-            else -> 0.8f
-        },
-        animationSpec = springSpec,
-        label = "scale"
+        if (exitState) 0.8f else 1f,
+        springSpec
     )
-
     val alpha by animateFloatAsState(
-        targetValue = if (visible && !exitState) 1f else 0f,
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
-        label = "alpha"
+        if (visible && !exitState) 1f else 0f,
+        tween(300, easing = FastOutSlowInEasing)
     )
 
     val progressAnimation = remember { Animatable(1f) }
-
     LaunchedEffect(Unit) {
         scope.launch {
-            progressAnimation.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(2500, easing = FastOutSlowInEasing)
-            )
+            progressAnimation.animateTo(0f, tween(2500))
         }
     }
 
-    val baseColor = ONotifBase 
-    val accentColor = ONotifAccent 
+    // 根据开启/关闭选择颜色
+    val baseColor = when (item.action) {
+        ModuleAction.ENABLE -> ONotifBase
+        ModuleAction.DISABLE -> ONotifDisableBase
+    }
+    val accentColor = when (item.action) {
+        ModuleAction.ENABLE -> ONotifAccent
+        ModuleAction.DISABLE -> ONotifDisableAccent
+    }
 
     Box(
         modifier = Modifier
@@ -177,35 +177,31 @@ fun NotificationCard(notification: NotificationItem, notificationState: Notifica
             .alpha(alpha)
             .scale(scale)
             .shadow(
-                elevation = 12.dp, // 增加阴影深度
+                elevation = 12.dp,
                 shape = RoundedCornerShape(12.dp),
                 spotColor = Color.Black.copy(alpha = 0.8f),
                 ambientColor = Color.Black.copy(alpha = 0.6f)
             )
             .clip(RoundedCornerShape(12.dp))
-            .width(140.dp) // 固定宽度防止重叠
-            .height(75.dp) // 固定高度防止重叠
+            .width(140.dp)
+            .height(75.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    color = baseColor.copy(alpha = 0.95f), // 增加不透明度
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .padding(10.dp), // 增加内边距
+                .background(baseColor.copy(alpha = 0.95f))
+                .padding(10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 上部分：模块名称和指示器
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = notification.moduleName,
+                    text = item.moduleName,
                     color = ONotifText,
-                    fontSize = 12.sp, // 稍微增大字体
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     style = TextStyle(
                         shadow = Shadow(
@@ -221,17 +217,16 @@ fun NotificationCard(notification: NotificationItem, notificationState: Notifica
 
                 Box(
                     modifier = Modifier
-                        .size(6.dp) // 增大指示器
-                        .background(
-                            color = accentColor,
-                            shape = RoundedCornerShape(3.dp)
-                        )
+                        .size(6.dp)
+                        .background(accentColor, RoundedCornerShape(3.dp))
                 )
             }
 
-            // 中间：状态文本
             Text(
-                text = "Enabled",
+                text = when (item.action) {
+                    ModuleAction.ENABLE -> "Enabled"
+                    ModuleAction.DISABLE -> "Disabled"
+                },
                 color = ONotifText.copy(alpha = 0.8f),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
@@ -244,14 +239,13 @@ fun NotificationCard(notification: NotificationItem, notificationState: Notifica
                 )
             )
 
-            // 下部分：进度条
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(3.dp) // 增加进度条高度
+                    .height(3.dp)
                     .background(
-                        color = ONotifProgressbar.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(1.5.dp)
+                        ONotifProgressbar.copy(alpha = 0.3f),
+                        RoundedCornerShape(1.5.dp)
                     )
             ) {
                 Box(
@@ -260,10 +254,7 @@ fun NotificationCard(notification: NotificationItem, notificationState: Notifica
                         .height(3.dp)
                         .background(
                             brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    ONotifProgressbar,
-                                    ONotifProgressbar.copy(alpha = 0.8f)
-                                )
+                                listOf(accentColor, accentColor.copy(alpha = 0.8f))
                             ),
                             shape = RoundedCornerShape(1.5.dp)
                         )
@@ -273,59 +264,55 @@ fun NotificationCard(notification: NotificationItem, notificationState: Notifica
     }
 }
 
+/* ===============  状态管理  =============== */
+private enum class ModuleAction { ENABLE, DISABLE }
 
-private fun cos(angle: Float): Float = kotlin.math.cos(angle)
-private fun sin(angle: Float): Float = kotlin.math.sin(angle)
+data class NotificationItem(
+    val id: Int,
+    val moduleName: String,
+    val action: ModuleAction
+)
 
-class NotificationState {
+
+private class NotificationState {
     private val _notifications = mutableStateListOf<NotificationItem>()
     val notifications: List<NotificationItem> get() = _notifications
 
     private var nextId = 0
-    private val activeModules = mutableSetOf<String>() 
+    private val activeKeys = mutableSetOf<String>()
 
-    fun addNotification(moduleName: String) {
-        if (moduleName in activeModules) {
-            return 
-        }
-        activeModules.add(moduleName)
+    fun addNotification(moduleName: String, action: ModuleAction) {
+        val key = "$moduleName-${action.name}"
+        if (key in activeKeys) return
+        activeKeys.add(key)
 
-        // 限制最多显示3个通知，防止过度重叠
         if (_notifications.size >= 3) {
             val oldest = _notifications.removeFirst()
-            activeModules.remove(oldest.moduleName)
+            activeKeys.remove("${oldest.moduleName}-${oldest.action.name}")
         }
-        _notifications.add(NotificationItem(nextId++, moduleName))
+        _notifications.add(NotificationItem(nextId++, moduleName, action))
     }
 
     fun removeNotification(id: Int) {
-        val notification = _notifications.find { it.id == id }
-        if (notification != null) {
-            _notifications.remove(notification)
-            activeModules.remove(notification.moduleName) 
+        val item = _notifications.find { it.id == id } ?: return
+        _notifications.remove(item)
+        activeKeys.remove("${item.moduleName}-${item.action.name}")
+    }
+}
+
+/* ===============  预览  =============== */
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+private fun PreviewCards() {
+    val state = NotificationState().apply {
+        addNotification("Test Module", ModuleAction.ENABLE)
+        addNotification("Another", ModuleAction.DISABLE)
+    }
+    Box(Modifier.background(Color.Black).padding(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            state.notifications.forEach {
+                NotificationCard(it, state)
+            }
         }
     }
 }
-
-
-@Preview(showBackground = true, backgroundColor = 0xFF000000)
-@Composable
-fun NotificationCardPreview() {
-    val sampleNotification = NotificationItem(id = 1, moduleName = "Sample Module")
-    val notificationState = NotificationState().apply {
-        addNotification(sampleNotification.moduleName)
-    }
-
-    Box(
-        modifier = Modifier
-            .padding(16.dp)
-            .background(Color.Black)
-    ) {
-        NotificationCard(
-            notification = sampleNotification,
-            notificationState = notificationState
-        )
-    }
-}
-
-data class NotificationItem(val id: Int, val moduleName: String)

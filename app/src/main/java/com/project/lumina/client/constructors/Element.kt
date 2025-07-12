@@ -10,13 +10,7 @@ import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.mods.OverlayModuleList
 import com.project.lumina.client.overlay.mods.OverlayNotification
 import com.project.lumina.client.overlay.manager.OverlayShortcutButton
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.put
+import kotlinx.serialization.json.*
 
 abstract class Element(
     val name: String,
@@ -25,8 +19,7 @@ abstract class Element(
     defaultEnabled: Boolean = false,
     val private: Boolean = false,
     @StringRes open val displayNameResId: Int? = null
-) : InterruptiblePacketHandler,
-    Configurable {
+) : InterruptiblePacketHandler, Configurable {
 
     open lateinit var session: NetBound
 
@@ -37,11 +30,7 @@ abstract class Element(
         set(value) {
             if (_isEnabled != value) {
                 _isEnabled = value
-                if (value) {
-                    onEnabled()
-                } else {
-                    onDisabled()
-                }
+                if (value) onEnabled() else onDisabled()
             }
         }
 
@@ -49,15 +38,11 @@ abstract class Element(
         get() = ::session.isInitialized
 
     var isExpanded by mutableStateOf(false)
-
     var isShortcutDisplayed by mutableStateOf(false)
-
     var shortcutX = 0
-
     var shortcutY = 100
 
     val overlayShortcutButton by lazy { OverlayShortcutButton(this) }
-
     override val values: MutableList<Value<*>> = ArrayList()
 
     open fun onEnabled() {
@@ -70,7 +55,8 @@ abstract class Element(
         sendToggleMessage(false)
     }
 
-    open fun toJson() = buildJsonObject {
+    /* ========= JSON 保存/读取保持不变 ========= */
+    override fun toJson() = buildJsonObject {
         put("state", isEnabled)
         put("values", buildJsonObject {
             values.forEach { value ->
@@ -86,64 +72,36 @@ abstract class Element(
         }
     }
 
-    open fun fromJson(jsonElement: JsonElement) {
-        if (jsonElement is JsonObject) {
-            isEnabled = (jsonElement["state"] as? JsonPrimitive)?.boolean ?: isEnabled
-            (jsonElement["values"] as? JsonObject)?.let {
-                it.forEach { jsonObject ->
-                    val value = getValue(jsonObject.key)
-                        ?: if (jsonObject.key.toIntOrNull() != null) {
-                            values.find { it.nameResId == jsonObject.key.toInt() }
-                        } else null
-
-                    value?.let { v ->
-                        try {
-                            v.fromJson(jsonObject.value)
-                        } catch (e: Throwable) {
-                            v.reset()
-                        }
-                    }
-                }
+    override fun fromJson(jsonElement: JsonElement) {
+        if (jsonElement !is JsonObject) return
+        isEnabled = (jsonElement["state"] as? JsonPrimitive)?.boolean ?: isEnabled
+        (jsonElement["values"] as? JsonObject)?.let { obj ->
+            obj.forEach { (key, value) ->
+                val v = getValue(key) ?: values.find { it.nameResId.toString() == key }
+                v?.runCatching { fromJson(value) } ?: v?.reset()
             }
-            (jsonElement["shortcut"] as? JsonObject)?.let {
-                shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
-                shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
-                isShortcutDisplayed = true
-            }
+        }
+        (jsonElement["shortcut"] as? JsonObject)?.let {
+            shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
+            shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
+            isShortcutDisplayed = true
         }
     }
 
-
+    /* ========= 通知相关：最小改动 ========= */
     private fun sendToggleMessage(enabled: Boolean) {
-        if (!isSessionCreated) {
-            return
-        }
-
-        val moduleName = name
-        val drawable = "toc_24px"
-
-        val moduleDisplayName = name
-
+        if (!isSessionCreated) return
         try {
+            /* 关键：根据 enabled 决定动作 */
+            OverlayNotification.addNotification(name, enabled)
+            // 如果你仍需 OverlayModuleList 的文本提示，保留下面两行
             if (enabled) {
-                showModuleNotification()
-                OverlayModuleList.showText(moduleName)
+                OverlayModuleList.showText(name)
             } else {
-                OverlayModuleList.removeText(moduleName)
+                OverlayModuleList.removeText(name)
             }
         } catch (e: Exception) {
             Log.w("AppCrashChan :3", "Failed to show module notification: ${e.message}")
         }
     }
-
-    private fun showModuleNotification() {
-        OverlayNotification.addNotification(name)
-        try {
-            OverlayManager.showOverlayWindow(OverlayNotification())
-        } catch (e: Exception) {
-            Log.w("AppCrashChan :3", "Failed to show overlay: ${e.message}")
-        }
-    }
 }
-
-
