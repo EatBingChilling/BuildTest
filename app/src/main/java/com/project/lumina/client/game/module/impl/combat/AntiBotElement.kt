@@ -7,7 +7,7 @@ import com.project.lumina.client.game.entity.Player
 import com.project.lumina.client.game.entity.LocalPlayer
 import com.project.lumina.client.util.AssetManager
 
-class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_sword_cross_black_24dp")) : Element(
+class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_ghost_black_24dp")) : Element(
     name = "AntiBot",
     category = CheatCategory.Combat,
     iconResId,

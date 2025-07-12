@@ -1,6 +1,5 @@
 package com.project.lumina.client.game.module.impl.motion
 
-import com.project.lumina.client.R
 import com.project.lumina.client.game.InterceptablePacket
 import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.constructors.CheatCategory
@@ -16,19 +15,24 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
     iconResId,
     displayNameResId = AssetManager.getString("module_air_jump_display_name")
 ) {
+    private var mode by intValue("Mode", 0, 0..1)
+    
     private var jumpValue by floatValue("Jump", 0.42f, 0.1f..3f)
     private var speedMultiplierValue by floatValue("SpeedMultiplier", 1f, 0.5f..3f)
     private var speedBoostValue by boolValue("Speed Boost", false)
-    
-    private var jumpTriggered by boolValue("JumpTriggered", false)
+    private var jumpTriggered = false
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
-        if (!isEnabled) {
-            return
+        if (!isEnabled) return
+
+        when (mode) {
+            0 -> method0(interceptablePacket)
+            1 -> method1(interceptablePacket)
         }
+    }
 
+    private fun method0(interceptablePacket: InterceptablePacket) {
         val packet = interceptablePacket.packet
-
         if (packet is PlayerAuthInputPacket) {
             val isJumpPressed = packet.inputData.contains(PlayerAuthInputData.JUMP_DOWN)
             val player = session.localPlayer
@@ -52,9 +56,25 @@ class AirJumpElement(iconResId: Int = AssetManager.getAsset("ic_cloud_upload_bla
                 }
                 session.clientBound(motionPacket)
                 jumpTriggered = true
-            } 
-            else if (!isJumpPressed) {
+            } else if (!isJumpPressed) {
                 jumpTriggered = false
+            }
+        }
+    }
+
+    private fun method1(interceptablePacket: InterceptablePacket) {
+        val packet = interceptablePacket.packet
+        if (packet is PlayerAuthInputPacket) {
+            if (packet.inputData.contains(PlayerAuthInputData.JUMP_DOWN)) {
+                val motionPacket = SetEntityMotionPacket().apply {
+                    runtimeEntityId = session.localPlayer.runtimeEntityId
+                    motion = Vector3f.from(
+                        session.localPlayer.motionX,
+                        0.42f,
+                        session.localPlayer.motionZ
+                    )
+                }
+                session.clientBound(motionPacket)
             }
         }
     }
