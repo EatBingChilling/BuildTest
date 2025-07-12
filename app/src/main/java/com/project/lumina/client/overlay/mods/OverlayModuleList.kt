@@ -23,8 +23,6 @@ import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
 import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.roundToInt
 
 class OverlayModuleList : OverlayWindow() {
 
@@ -48,10 +46,11 @@ class OverlayModuleList : OverlayWindow() {
         private val overlayInstance by lazy { OverlayModuleList() }
         private var shouldShowOverlay = false
 
+        /* 对外暴露的静态方法（保持兼容）*/
         fun showText(name: String) {
             if (shouldShowOverlay) {
                 moduleState.addModule(name)
-                runCatching { OverlayManager.showOverlayWindow(overlayInstance) }
+                kotlin.runCatching { OverlayManager.showOverlayWindow(overlayInstance) }
             }
         }
 
@@ -61,13 +60,13 @@ class OverlayModuleList : OverlayWindow() {
 
         fun setOverlayEnabled(enabled: Boolean) {
             shouldShowOverlay = enabled
-            if (!enabled) runCatching { OverlayManager.dismissOverlayWindow(overlayInstance) }
+            if (!enabled) kotlin.runCatching { OverlayManager.dismissOverlayWindow(overlayInstance) }
         }
 
-        fun isOverlayEnabled() = shouldShowOverlay
+        fun isOverlayEnabled(): Boolean = shouldShowOverlay
     }
 
-    /* -------------------- Compose UI -------------------- */
+    /* ---------------------------------------------------------------------- */
 
     @Composable
     override fun Content() {
@@ -84,51 +83,46 @@ class OverlayModuleList : OverlayWindow() {
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            sorted.forEachIndexed { idx, mod ->
-                key(mod.id) {
+            sorted.forEachIndexed { idx, item ->
+                key(item.id) {
                     NeonTextRow(
-                        text = mod.name,
+                        text = item.name,
                         index = idx,
                         total = sorted.size,
-                        onRemove = { moduleState.markForRemoval(mod.name) },
-                        isRemoving = moduleState.modulesToRemove.contains(mod.name)
+                        isRemoving = moduleState.modulesToRemove.contains(item.name),
+                        onRemove = { moduleState.removeModule(item.name) }
                     )
                 }
             }
         }
     }
 
-    /* -------------------- Neon Row -------------------- */
+    /* -------------------- 单行 Neon -------------------- */
 
     @Composable
     private fun NeonTextRow(
         text: String,
         index: Int,
         total: Int,
-        onRemove: () -> Unit,
-        isRemoving: Boolean
+        isRemoving: Boolean,
+        onRemove: () -> Unit
     ) {
         val density = LocalDensity.current
-        val glowRadiusPx = with(density) { 10.dp.toPx() }
+        val glowPx = with(density) { 10.dp.toPx() }
 
-        /* 颜色动画 */
+        /* 颜色流动 */
         val infinite = rememberInfiniteTransition()
         val phase by infinite.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(5000, easing = LinearEasing)
-            )
+            0f, 1f,
+            infiniteRepeatable(tween(5000, easing = LinearEasing))
         )
 
         /* 文字测量 */
-        val textMeasurer = rememberTextMeasurer()
+        val tm = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
-        val layout = remember(text) { textMeasurer.measure(text, style) }
-        val widthDp = with(density) { layout.size.width.toDp() }
-        val heightDp = with(density) { layout.size.height.toDp() }
+        val layout = remember(text) { tm.measure(text, style) }
 
-        /* 进入/退出动画 */
+        /* 动画 */
         var enterDone by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             delay(index * 50L)
@@ -136,12 +130,12 @@ class OverlayModuleList : OverlayWindow() {
         }
 
         val alpha by animateFloatAsState(
-            targetValue = if (isRemoving) 0f else if (enterDone) 1f else 0f,
+            targetValue = if (isRemoving || !enterDone) 0f else 1f,
             animationSpec = tween(300)
         )
 
         val offsetX by animateFloatAsState(
-            targetValue = if (isRemoving) 200f else if (enterDone) 0f else 200f,
+            targetValue = if (isRemoving) 200f else 0f,
             animationSpec = tween(300)
         )
 
@@ -157,11 +151,14 @@ class OverlayModuleList : OverlayWindow() {
                 .wrapContentSize()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Canvas(Modifier.size(widthDp, heightDp)) {
-                val colorPos = (phase + index * 0.7f / max(total, 1)) % 1f
-                val color = smoothColor(colorPos)
+            val colorPos = (phase + index * 0.7f / max(total, 1)) % 1f
+            val color = smoothColor(colorPos)
 
-                /* 发光层 ×3 */
+            Canvas(Modifier.size(
+                width = with(density) { layout.size.width.toDp() },
+                height = with(density) { layout.size.height.toDp() }
+            )) {
+                /* 发光层 */
                 repeat(3) {
                     drawIntoCanvas { canvas ->
                         val paint = android.graphics.Paint().apply {
@@ -169,7 +166,7 @@ class OverlayModuleList : OverlayWindow() {
                             textSize = style.fontSize.toPx()
                             typeface = android.graphics.Typeface.DEFAULT_BOLD
                             isAntiAlias = true
-                            maskFilter = BlurMaskFilter(glowRadiusPx, BlurMaskFilter.Blur.SOLID)
+                            maskFilter = BlurMaskFilter(glowPx, BlurMaskFilter.Blur.SOLID)
                         }
                         canvas.nativeCanvas.drawText(
                             text,
@@ -182,8 +179,8 @@ class OverlayModuleList : OverlayWindow() {
 
                 /* 实体文字 */
                 drawText(
-                    textMeasurer,
-                    text,
+                    textMeasurer = tm,
+                    text = text,
                     topLeft = Offset.Zero,
                     style = style.copy(color = color)
                 )
@@ -191,10 +188,10 @@ class OverlayModuleList : OverlayWindow() {
         }
     }
 
-    /* -------------------- Gradient Helper -------------------- */
+    /* -------------------- 颜色插值 -------------------- */
 
     private fun smoothColor(position: Float): Color {
-        val hsvList = listOf(
+        val hsvSteps = listOf(
             floatArrayOf(0f, 1f, 1f),
             floatArrayOf(15f, 1f, 1f),
             floatArrayOf(30f, 1f, 1f),
@@ -220,23 +217,21 @@ class OverlayModuleList : OverlayWindow() {
             floatArrayOf(330f, 1f, 1f),
             floatArrayOf(345f, 1f, 1f)
         )
-
-        val len = hsvList.size
+        val len = hsvSteps.size
         val pos = (position % 1f).coerceIn(0f, 1f)
         val scaled = pos * (len - 1)
         val idx = scaled.toInt()
         val fract = scaled - idx
 
-        val hsv1 = hsvList[idx % len]
-        val hsv2 = hsvList[(idx + 1) % len]
+        val hsv1 = hsvSteps[idx % len]
+        val hsv2 = hsvSteps[(idx + 1) % len]
 
         val hue1 = hsv1[0]
         val hue2 = hsv2[0]
-        val hueDiff = hue2 - hue1
         val hue = when {
-            hueDiff > 180 -> hue1 + fract * (hue2 - 360 - hue1)
-            hueDiff < -180 -> hue1 + fract * (hue2 + 360 - hue1)
-            else -> hue1 + fract * hueDiff
+            hue2 - hue1 > 180 -> hue1 + fract * (hue2 - 360 - hue1)
+            hue2 - hue1 < -180 -> hue1 + fract * (hue2 + 360 - hue1)
+            else -> hue1 + fract * (hue2 - hue1)
         }.let { (it + 360) % 360 }
 
         val sat = hsv1[1] + fract * (hsv2[1] - hsv1[1])
@@ -246,7 +241,7 @@ class OverlayModuleList : OverlayWindow() {
     }
 }
 
-/* -------------------- State -------------------- */
+/* -------------------- 状态 -------------------- */
 
 class ModuleState {
     private val _modules = mutableStateListOf<ModuleItem>()
