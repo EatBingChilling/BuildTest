@@ -386,7 +386,7 @@ class SpeedometerOverlay : OverlayWindow() {
 
                 
                 Text(
-                    text = "Avg: ${String.format("%.1f", avgSpeed)} BPS",
+                    text = "平均: ${String.format("%.1f", avgSpeed)} BPS",
                     style = TextStyle(
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 10.sp,

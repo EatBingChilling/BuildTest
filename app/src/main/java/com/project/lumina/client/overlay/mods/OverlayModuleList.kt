@@ -41,62 +41,54 @@ class OverlayModuleList : OverlayWindow() {
 
     override val layoutParams: WindowManager.LayoutParams get() = _layoutParams
 
-    /* ======================================================================= */
-    /*  对外接口                                                                 */
-    /* ======================================================================= */
-
     companion object {
-    private val moduleState = ModuleState()
-    private val overlayInstance by lazy { OverlayModuleList() }
-    private var shouldShowOverlay = false
+        private val moduleState = ModuleState()
+        private val overlayInstance by lazy { OverlayModuleList() }
+        private var shouldShowOverlay = false
 
-    fun showText(name: String) {
-        if (shouldShowOverlay) {
-            moduleState.addModule(name)
-            kotlin.runCatching { OverlayManager.showOverlayWindow(overlayInstance) }
+        fun showText(name: String) {
+            if (shouldShowOverlay) {
+                moduleState.addModule(name)
+                kotlin.runCatching { OverlayManager.showOverlayWindow(overlayInstance) }
+            }
         }
+
+        fun removeText(name: String) {
+            moduleState.markForRemoval(name)
+        }
+
+        fun setOverlayEnabled(enabled: Boolean) {
+            shouldShowOverlay = enabled
+            if (!enabled) kotlin.runCatching { OverlayManager.dismissOverlayWindow(overlayInstance) }
+        }
+
+        fun isOverlayEnabled(): Boolean = shouldShowOverlay
+
+        /* 向下兼容空壳 */
+        @Suppress("unused")
+        fun setCapitalizeAndMerge(enabled: Boolean) = Unit
+
+        @Suppress("unused")
+        fun setDisplayMode(mode: String) = Unit
     }
 
-    fun removeText(name: String) {
-        moduleState.markForRemoval(name)
-    }
-
-    fun setOverlayEnabled(enabled: Boolean) {
-        shouldShowOverlay = enabled
-        if (!enabled) kotlin.runCatching { OverlayManager.dismissOverlayWindow(overlayInstance) }
-    }
-
-    fun isOverlayEnabled(): Boolean = shouldShowOverlay
-
-    /* ↓↓↓ 向下兼容 ↓↓↓ */
-    @Suppress("unused")
-    fun setCapitalizeAndMerge(enabled: Boolean) = Unit
-
-    @Suppress("unused")
-    fun setDisplayMode(mode: String) = Unit
-}
-
-
-    /* ======================================================================= */
-    /*  Compose UI                                                               */
-    /* ======================================================================= */
+    /* --------------------------------------------------------------------- */
 
     @Composable
     override fun Content() {
         if (!isOverlayEnabled()) return
 
-        /* 统一彩虹流动 */
         val infinite = rememberInfiniteTransition()
         val phase by infinite.animateFloat(
             0f, 1f,
             infiniteRepeatable(tween(5000, easing = LinearEasing))
         )
 
-        /* 先测量宽度，再按宽度降序排列 */
         val density = LocalDensity.current
         val style = TextStyle(fontSize = 13.sp)
         val tm = rememberTextMeasurer()
 
+        /* 先测宽度，再按宽度降序排列 */
         val sorted = remember(moduleState.modules) {
             moduleState.modules
                 .map { it to tm.measure(it.name, style).size.width }
@@ -109,7 +101,7 @@ class OverlayModuleList : OverlayWindow() {
                 .wrapContentSize()
                 .padding(top = 8.dp, end = 3.dp),
             horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.Top   // 0 dp 行距
         ) {
             sorted.forEachIndexed { idx, item ->
                 key(item.id) {
@@ -126,7 +118,7 @@ class OverlayModuleList : OverlayWindow() {
         }
     }
 
-    /* -------------------- 仅发光阴影 -------------------- */
+    /* -------------------- 仅发光阴影（0 行距） -------------------- */
 
     @Composable
     private fun GlowOnlyRow(
@@ -139,13 +131,11 @@ class OverlayModuleList : OverlayWindow() {
     ) {
         val density = LocalDensity.current
         val glowPx = with(density) { 10.dp.toPx() }
-        val padding = with(density) { 12.dp.toPx() }   // 额外留白，防止裁断
 
         val tm = rememberTextMeasurer()
         val style = TextStyle(fontSize = 13.sp)
         val layout = remember(text) { tm.measure(text, style) }
 
-        /* 动画 */
         var enterDone by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { delay(index * 50L); enterDone = true }
 
@@ -159,26 +149,22 @@ class OverlayModuleList : OverlayWindow() {
         )
         LaunchedEffect(alpha) { if (alpha == 0f && isRemoving) onRemove() }
 
-        /* 计算整屏彩虹位置（连贯） */
         val yRatio = index.toFloat() / max(total - 1, 1)
         val colorPos = (phase + yRatio * 0.7f) % 1f
         val color = smoothColor(colorPos)
 
-        /* 发光阴影，无实体文字 */
+        /* 紧贴文字，无纵向 padding */
         Box(
             modifier = Modifier
                 .offset(x = offsetX.dp)
                 .alpha(alpha)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .wrapContentSize()
         ) {
             Canvas(
-                Modifier.size(
-                    width = with(density) { (layout.size.width + padding * 2).toDp() },
-                    height = with(density) { (layout.size.height + padding * 2).toDp() }
-                )
+                Modifier.wrapContentSize()
             ) {
-                val xOffset = padding
-                val yOffset = padding + layout.firstBaseline
+                val x = 0f
+                val y = layout.firstBaseline
 
                 repeat(3) {
                     drawIntoCanvas { canvas ->
@@ -189,14 +175,12 @@ class OverlayModuleList : OverlayWindow() {
                             isAntiAlias = true
                             maskFilter = BlurMaskFilter(glowPx, BlurMaskFilter.Blur.SOLID)
                         }
-                        canvas.nativeCanvas.drawText(text, xOffset, yOffset, paint)
+                        canvas.nativeCanvas.drawText(text, x, y, paint)
                     }
                 }
             }
         }
     }
-
-    /* -------------------- HSV 彩虹插值 -------------------- */
 
     private fun smoothColor(position: Float): Color {
         val hsvSteps = listOf(
