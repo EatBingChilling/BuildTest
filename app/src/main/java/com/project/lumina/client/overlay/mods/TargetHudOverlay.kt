@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -37,7 +38,6 @@ import androidx.compose.ui.unit.sp
 import com.project.lumina.client.ui.theme.MyFontFamily
 import kotlinx.coroutines.delay
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.draw.graphicsLayer
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 
@@ -51,9 +51,9 @@ class TargetHudOverlay : OverlayWindow() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
-            gravity = Gravity.BOTTOM or Gravity.START   // 左下角
-            x = 20                                      // 左边距
-            y = 20                                      // 下边距
+            gravity = Gravity.CENTER
+            x = 80 
+            y = 60 
         }
     }
 
@@ -63,12 +63,13 @@ class TargetHudOverlay : OverlayWindow() {
     companion object {
         private val overlayInstance by lazy { TargetHudOverlay() }
         private var isVisible = false
-        private const val DISPLAY_DURATION = 3000L
+        private const val DISPLAY_DURATION = 3000L 
 
+        
         private var targetUsername by mutableStateOf("")
         private var targetImage by mutableStateOf<Bitmap?>(null)
         private var targetDistance by mutableStateOf(0f)
-        private var targetHealth by mutableStateOf(1f)
+        private var targetHealth by mutableStateOf(1f) 
         private var targetMaxHealth by mutableStateOf(20f)
         private var targetAbsorption by mutableStateOf(0f)
         private var targetMaxAbsorption by mutableStateOf(20f)
@@ -78,7 +79,7 @@ class TargetHudOverlay : OverlayWindow() {
             username: String,
             image: Bitmap?,
             distance: Float,
-            maxDistance: Float = 50f,
+            maxDistance: Float = 50f, 
             hurtTime: Float = 0f
         ) {
             targetUsername = username
@@ -95,7 +96,7 @@ class TargetHudOverlay : OverlayWindow() {
                 try {
                     OverlayManager.showOverlayWindow(overlayInstance)
                 } catch (e: Exception) {
-                    // ignore
+                    
                 }
             }
         }
@@ -105,7 +106,7 @@ class TargetHudOverlay : OverlayWindow() {
             try {
                 OverlayManager.dismissOverlayWindow(overlayInstance)
             } catch (e: Exception) {
-                // ignore
+                
             }
         }
 
@@ -116,12 +117,13 @@ class TargetHudOverlay : OverlayWindow() {
     override fun Content() {
         var visible by remember { mutableStateOf(false) }
 
+        
         LaunchedEffect(isVisible) {
             if (isVisible) {
                 visible = true
                 delay(DISPLAY_DURATION)
                 visible = false
-                delay(300)
+                delay(300) 
                 dismissTargetHud()
             }
         }
@@ -154,19 +156,21 @@ class TargetHudOverlay : OverlayWindow() {
         username: String,
         image: Bitmap?,
         distance: Float,
-        health: Float,
-        maxHealth: Float,
-        absorption: Float,
-        maxAbsorption: Float,
+        health: Float, 
+        maxHealth: Float, 
+        absorption: Float, 
+        maxAbsorption: Float, 
         hurtTime: Float,
         fontFamily: FontFamily
     ) {
+        
         val animatedDistance by animateFloatAsState(
             targetValue = distance,
             animationSpec = tween(durationMillis = 600, easing = EaseOutCubic),
             label = "distance_animation"
         )
 
+        
         val hurtScale by animateFloatAsState(
             targetValue = if (hurtTime > 0) 0.85f else 1f,
             animationSpec = spring(
@@ -182,24 +186,27 @@ class TargetHudOverlay : OverlayWindow() {
             label = "hurt_alpha"
         )
 
+        
         val baseHue = remember(username) {
             val charCount = username.length
             val charSum = username.sumOf { it.code }
+            
             ((charCount * 137.5f + charSum * 31.7f) % 360f).coerceIn(0f, 360f)
         }
         val themeColors = remember(username) {
             Pair(
-                Color.hsv(baseHue, 0.8f, 1.0f, 0.5f),
-                Color.hsv((baseHue + 25f) % 360f, 0.7f, 1.0f, 0.4f)
+                Color.hsv(baseHue, 0.8f, 1.0f, 0.5f), 
+                Color.hsv((baseHue + 25f) % 360f, 0.7f, 1.0f, 0.4f) 
             )
         }
-
+        
         val statusColor = remember(username) {
-            Color.hsv((baseHue + 50f) % 360f, 0.75f, 1.0f, 0.9f)
+            Color.hsv((baseHue + 50f) % 360f, 0.75f, 1.0f, 0.9f) 
         }
-
+        
         val backgroundColor = Color(0xFF151515).copy(0.6f)
 
+        
         Box(
             modifier = Modifier
                 .width(190.dp)
@@ -208,6 +215,7 @@ class TargetHudOverlay : OverlayWindow() {
                     color = backgroundColor,
                     shape = RoundedCornerShape(15.dp)
                 )
+
                 .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
             Row(
@@ -215,15 +223,13 @@ class TargetHudOverlay : OverlayWindow() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
+                
                 Box(
                     modifier = Modifier
                         .size(54.dp)
                         .scale(hurtScale)
                         .alpha(hurtAlpha)
-                        .graphicsLayer {
-                            shape = CircleShape
-                            clip = true
-                        }
+                        .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.05f))
                         .border(
                             2.dp,
@@ -238,13 +244,11 @@ class TargetHudOverlay : OverlayWindow() {
                             contentDescription = "Player Avatar",
                             modifier = Modifier
                                 .fillMaxSize()
-                                .graphicsLayer {
-                                    shape = CircleShape
-                                    clip = true
-                                },
+                                .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     } else {
+                        
                         Text(
                             text = username.take(2).uppercase(),
                             color = Color.White.copy(alpha = 0.8f),
@@ -255,13 +259,15 @@ class TargetHudOverlay : OverlayWindow() {
                     }
                 }
 
+                
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    
                     Text(
                         text = username,
-                        color = Color.White.copy(alpha = 1.0f),
+                        color = Color.White.copy(alpha = 1.0f), 
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = fontFamily,
@@ -269,31 +275,33 @@ class TargetHudOverlay : OverlayWindow() {
                         overflow = TextOverflow.Ellipsis
                     )
 
+                    
                     Column(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
+                        
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(10.dp)
-                                .graphicsLayer {
-                                    shape = RoundedCornerShape(5.dp)
-                                    clip = true
-                                }
+                                .clip(RoundedCornerShape(5.dp))
                                 .background(Color.Black.copy(alpha = 0.4f))
+                              /*  .border(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.1f),
+                                    RoundedCornerShape(5.dp)
+                                )*/
                         ) {
-                            val distancePercentage =
-                                (1f - (animatedDistance / maxHealth)).coerceIn(0f, 1f)
+                            
+                            val distancePercentage = (1f - (animatedDistance / maxHealth)).coerceIn(0f, 1f)
 
+                            
                             if (distancePercentage > 0f) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth(distancePercentage)
                                         .fillMaxHeight()
-                                        .graphicsLayer {
-                                            shape = RoundedCornerShape(5.dp)
-                                            clip = true
-                                        }
+                                        .clip(RoundedCornerShape(5.dp))
                                         .background(
                                             brush = Brush.horizontalGradient(
                                                 colors = listOf(
@@ -304,29 +312,49 @@ class TargetHudOverlay : OverlayWindow() {
                                         )
                                 )
                             }
+
+                            
+                           /** Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(distancePercentage)
+                                    .height(2.dp)
+                                    .align(Alignment.BottomStart)
+                                    .clip(RoundedCornerShape(bottomStart = 5.dp, bottomEnd = 5.dp))
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                themeColors.first.copy(alpha = 1.0f),
+                                                themeColors.second.copy(alpha = 1.0f)
+                                            )
+                                        )
+                                    )
+                            )*/
                         }
 
+                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            
                             Text(
                                 text = "${String.format("%.1f", animatedDistance)}m",
-                                color = themeColors.first.copy(alpha = 1.0f),
+                                color = themeColors.first.copy(alpha = 1.0f), 
                                 fontSize = 12.sp,
                                 fontFamily = fontFamily,
                                 fontWeight = FontWeight.Bold
                             )
 
+                            
                             Text(
                                 text = when {
-                                    animatedDistance <= 5f -> "DANGER"
-                                    animatedDistance <= 15f -> "CLOSE"
-                                    animatedDistance <= 30f -> "MEDIUM"
-                                    else -> "FAR"
+                                    animatedDistance <= 5f -> "危险"
+                                    animatedDistance <= 15f -> "极近"
+                                    animatedDistance <= 30f -> "一般"
+                                    else -> "极远"
                                 },
-                                color = statusColor,
+                                color = statusColor, 
                                 fontSize = 10.sp,
                                 fontFamily = fontFamily,
                                 fontWeight = FontWeight.Medium
@@ -338,6 +366,7 @@ class TargetHudOverlay : OverlayWindow() {
         }
     }
 
+    
     @Preview(showBackground = true)
     @Composable
     private fun TargetHudContentPreview() {
@@ -346,10 +375,10 @@ class TargetHudOverlay : OverlayWindow() {
             username = "PlayerName123",
             image = null,
             distance = 10.5f,
-            health = 10.5f,
-            maxHealth = 50f,
-            absorption = 0f,
-            maxAbsorption = 20f,
+            health = 10.5f, 
+            maxHealth = 50f, 
+            absorption = 0f, 
+            maxAbsorption = 20f, 
             hurtTime = 0f,
             fontFamily = defaultFontFamily
         )
@@ -360,14 +389,14 @@ class TargetHudOverlay : OverlayWindow() {
     private fun TargetHudContentClosePreview() {
         val defaultFontFamily = FontFamily.Default
         TargetHudContent(
-            username = "Enemy",
+            username = "敌人",
             image = null,
             distance = 3.2f,
-            health = 3.2f,
-            maxHealth = 50f,
-            absorption = 0f,
-            maxAbsorption = 20f,
-            hurtTime = 5f,
+            health = 3.2f, 
+            maxHealth = 50f, 
+            absorption = 0f, 
+            maxAbsorption = 20f, 
+            hurtTime = 5f, 
             fontFamily = defaultFontFamily
         )
     }
