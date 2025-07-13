@@ -56,7 +56,8 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
     private object Vanilla {
         fun handlePacket(interceptablePacket: InterceptablePacket) {
             if (interceptablePacket.packet is MovePlayerPacket) {
-                interceptablePacket.isIntercepted = true
+                val movePacket = interceptablePacket.packet as MovePlayerPacket
+                movePacket.onGround = false
             }
         }
     }
@@ -72,12 +73,16 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
             return
         }
 
-        if (interceptablePacket.packet is SetEntityMotionPacket) {
+        if (interceptablePacket.packet is SetEntityMotionPacket || interceptablePacket.packet is MovePlayerPacket) {
             val packet = interceptablePacket.packet
-            if (packet.runtimeEntityId == session.localPlayer.runtimeEntityId) {
+            if (packet is SetEntityMotionPacket && packet.runtimeEntityId == session.localPlayer.runtimeEntityId) {
                 when (mode) {
                     "Vanilla" -> Vanilla.handlePacket(interceptablePacket)
                     "Packet" -> Packet.handlePacket(interceptablePacket)
+                }
+            } else if (packet is MovePlayerPacket && packet.runtimeEntityId == session.localPlayer.runtimeEntityId) {
+                if (mode == "Vanilla") {
+                    Vanilla.handlePacket(interceptablePacket)
                 }
             }
         }
