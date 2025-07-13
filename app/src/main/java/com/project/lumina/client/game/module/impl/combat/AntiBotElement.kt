@@ -12,16 +12,24 @@ class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_ghost_black_24dp
     name = "AntiBot",
     category = CheatCategory.Combat,
     iconResId,
-    displayNameResId = AssetManager.getString("module_antibot_display_name")
+    displayNameResId = AssetManager.getString("module_reach_display_name")
 ) {
 
-    private var antiBotModeValue by intValue("模式", 0, 0..1)
+    private var antiBotModeValue by intValue("Mode", 0, 0..1)
 
     fun Player.isBot(): Boolean {
         if (this is LocalPlayer) return false
 
         return when (antiBotModeValue) {
-            0 -> false
+            0 -> {
+                val currentPlayers = GameManager.netBound?.getCurrentPlayers() ?: emptyList()
+                val realPlayerInfo = currentPlayers.find { it.uuid == this.uuid }
+                if (realPlayerInfo == null) return true
+                if (this.username != realPlayerInfo.name) return true
+                if (this.username.isBlank() != realPlayerInfo.name.isBlank()) return true
+                if (this.username.contains("\n") != realPlayerInfo.name.contains("\n")) return true
+                false
+            }
             1 -> {
                 val currentPlayers = GameManager.netBound?.getCurrentPlayers() ?: emptyList()
                 val playerInfo = currentPlayers.find { it.uuid == this.uuid }
@@ -31,6 +39,6 @@ class AntiBotElement(iconResId: Int = AssetManager.getAsset("ic_ghost_black_24dp
         }
     }
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
-        
+
     }
 }

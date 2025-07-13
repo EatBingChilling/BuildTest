@@ -36,20 +36,14 @@
 
 package com.project.lumina.client.game.module.impl.combat
 
-import com.project.lumina.client.R
+import com.project.lumina.client.game.module.api.setting.stringValue
 import com.project.lumina.client.game.InterceptablePacket
 import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.constructors.CheatCategory
-import com.project.lumina.client.game.entity.Entity
-import com.project.lumina.client.game.entity.LocalPlayer
-import com.project.lumina.client.game.entity.Player
+import com.project.lumina.client.util.AssetManager
 import org.cloudburstmc.math.vector.Vector3f
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket
-import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket
-import kotlin.math.atan2
-import kotlin.random.Random
-import com.project.lumina.client.util.AssetManager
 
 class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Element(
     name = "Criticals",
@@ -57,84 +51,36 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
     iconResId,
     displayNameResId = AssetManager.getString("module_critbot_display_name")
 ) {
-    
-    private var maxRange by floatValue("范围", 4.0f, 2.0f..6.0f)
-    private var cps by intValue("CPS", 10, 1..15)
-    private var jumpHeight by floatValue("跳跃高度", 0.3f, 0.1f..0.5f)
-    private var randomizeTiming by boolValue("随机计时", true)
 
-    
-    private var lastAttackTime = 0L
-    private val attackDelayMs: Long
-        get() = (1000L / cps) * if (randomizeTiming) Random.nextInt(80, 120) / 100 else 1
+    private val mode by stringValue(this, "Mode", "Vanilla", listOf("Vanilla", "Packet"))
 
-    override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
-        if (!isEnabled) return
-
-        val packet = interceptablePacket.packet
-        if (packet !is PlayerAuthInputPacket) return
-
-        val currentTime = System.currentTimeMillis()
-        val targets = findTargetsInRange()
-        if (targets.isEmpty()) return
-
-        val target = targets.first()
-        rotateToTarget(target)
-
-        if (currentTime - lastAttackTime >= attackDelayMs) {
-            executeCriticalHit(target, currentTime)
+    private object Vanilla {
+        fun handlePacket(interceptablePacket: InterceptablePacket) {
+            if (interceptablePacket.packet is MovePlayerPacket) {
+                interceptablePacket.isOnGround = false
+            }
         }
     }
 
-    private fun findTargetsInRange(): List<Entity> {
-        return session.level.entityMap.values
-            .filter { it is Player && it !is LocalPlayer && !isBot(it as Player) }
-            .filter { it.distance(session.localPlayer) <= maxRange }
-            .sortedBy { it.distance(session.localPlayer) }
-            .take(1) 
+    private object Packet {
+        fun handlePacket(interceptablePacket: InterceptablePacket) {
+
+        }
     }
 
-    private fun isBot(player: Player): Boolean {
-        if (player is LocalPlayer) return false
-        val playerList = session.level.playerMap[player.uuid] ?: return true
-        return playerList.name.isBlank()
-    }
+    override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
+        if (!isEnabled) {
+            return
+        }
 
-    private fun rotateToTarget(target: Entity) {
-        val deltaX = target.vec3Position.x - session.localPlayer.vec3Position.x
-        val deltaZ = target.vec3Position.z - session.localPlayer.vec3Position.z
-        val yaw = (Math.toDegrees(atan2(deltaZ, deltaX).toDouble()).toFloat() - 90.0f + 360.0f) % 360.0f
-
-        
-        session.clientBound(MovePlayerPacket().apply {
-            runtimeEntityId = session.localPlayer.runtimeEntityId
-            position = session.localPlayer.vec3Position 
-            rotation = Vector3f.from(session.localPlayer.vec3Rotation.x, yaw, session.localPlayer.vec3Rotation.z)
-            mode = MovePlayerPacket.Mode.NORMAL
-            onGround = true 
-            tick = session.localPlayer.tickExists
-        })
-    }
-
-    private fun executeCriticalHit(target: Entity, currentTime: Long) {
-        
-        session.clientBound(SetEntityMotionPacket().apply {
-            runtimeEntityId = session.localPlayer.runtimeEntityId
-            motion = Vector3f.from(0.0f, jumpHeight, 0.0f)
-        })
-
-        
-        session.clientBound(MovePlayerPacket().apply {
-            runtimeEntityId = session.localPlayer.runtimeEntityId
-            position = session.localPlayer.vec3Position 
-            rotation = session.localPlayer.vec3Rotation 
-            mode = MovePlayerPacket.Mode.NORMAL
-            onGround = false 
-            tick = session.localPlayer.tickExists
-        })
-
-        
-        session.localPlayer.attack(target)
-        lastAttackTime = currentTime
+        if (interceptablePacket.packet is SetEntityMotionPacket) {
+            val packet = interceptablePacket.packet
+            if (packet.runtimeEntityId == session.localPlayer.runtimeEntityId) {
+                when (mode) {
+                    "Vanilla" -> Vanilla.handlePacket(interceptablePacket)
+                    "Packet" -> Packet.handlePacket(interceptablePacket)
+                }
+            }
+        }
     }
 }
