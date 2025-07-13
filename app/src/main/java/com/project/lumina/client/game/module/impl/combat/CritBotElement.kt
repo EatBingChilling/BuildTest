@@ -41,7 +41,6 @@ import com.project.lumina.client.game.InterceptablePacket
 import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.constructors.CheatCategory
 import com.project.lumina.client.util.AssetManager
-import org.cloudburstmc.math.vector.Vector3f
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket
 
@@ -57,7 +56,7 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
     private object Vanilla {
         fun handlePacket(interceptablePacket: InterceptablePacket) {
             if (interceptablePacket.packet is MovePlayerPacket) {
-                interceptablePacket.OnGround = false
+                interceptablePacket.isIntercepted = true
             }
         }
     }
