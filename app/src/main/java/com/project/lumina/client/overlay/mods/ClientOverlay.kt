@@ -31,13 +31,15 @@ class ClientOverlay : OverlayWindow() {
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
-    private var watermarkText by mutableStateOf(prefs.getString("text", "") ?: "")
-    private var textColor by mutableStateOf(prefs.getInt("color", Color.WHITE))
-    private var shadowEnabled by mutableStateOf(prefs.getBoolean("shadow", false))
-    private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
-    private var rainbowEnabled by mutableStateOf(prefs.getBoolean("rainbow", false))
-    private var alphaValue by mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
-    private var useUnifont by mutableStateOf(prefs.getBoolean("use_unifont", true))
+    private var watermarkText   by mutableStateOf(prefs.getString("text", "") ?: "")
+    private var textColor       by mutableStateOf(prefs.getInt("color", Color.WHITE))
+    private var shadowEnabled   by mutableStateOf(prefs.getBoolean("shadow", false))
+    private var fontSize        by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
+    private var rainbowEnabled  by mutableStateOf(prefs.getBoolean("rainbow", false))
+    // 新增：透明度 0-100
+    private var alphaValue      by mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
+    // 新增：是否使用 Unifont
+    private var useUnifont      by mutableStateOf(prefs.getBoolean("use_unifont", true))
 
     private val _layoutParams by lazy {
         super.layoutParams.apply {
@@ -46,7 +48,7 @@ class ClientOverlay : OverlayWindow() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            width = WindowManager.LayoutParams.MATCH_PARENT
+            width  = WindowManager.LayoutParams.MATCH_PARENT
             height = WindowManager.LayoutParams.MATCH_PARENT
             gravity = Gravity.CENTER
             x = 0
@@ -88,9 +90,7 @@ class ClientOverlay : OverlayWindow() {
 
         fun setOverlayEnabled(enabled: Boolean) {
             shouldShowOverlay = enabled
-            if (!enabled) {
-                dismissOverlay()
-            }
+            if (!enabled) dismissOverlay()
         }
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
@@ -101,88 +101,78 @@ class ClientOverlay : OverlayWindow() {
     }
 
     fun showConfigDialog() {
-        val dialogView = LayoutInflater.from(appContext).inflate(R.layout.overlay_config_dialog, null)
-        val editText = dialogView.findViewById<EditText>(R.id.editText)
-        val seekRed = dialogView.findViewById<SeekBar>(R.id.seekRed)
-        val seekGreen = dialogView.findViewById<SeekBar>(R.id.seekGreen)
-        val seekBlue = dialogView.findViewById<SeekBar>(R.id.seekBlue)
-        val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
-        val seekSize = dialogView.findViewById<SeekBar>(R.id.seekSize).apply { max = 295 }
-        val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
-        val seekAlpha = dialogView.findViewById<SeekBar>(R.id.seekAlpha).apply { max = 100 }
-        val textAlpha = dialogView.findViewById<TextView>(R.id.textAlpha)
-        val switchUseUnifont = dialogView.findViewById<Switch>(R.id.switchUseUnifont)
-        val colorPreview = dialogView.findViewById<TextView>(R.id.colorPreview)
+        val dialogView = LayoutInflater.from(appContext)
+            .inflate(R.layout.overlay_config_dialog, null)
 
+        val editText   = dialogView.findViewById<EditText>(R.id.editText)
+        val seekRed    = dialogView.findViewById<SeekBar>(R.id.seekRed)
+        val seekGreen  = dialogView.findViewById<SeekBar>(R.id.seekGreen)
+        val seekBlue   = dialogView.findViewById<SeekBar>(R.id.seekBlue)
+        val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
+        val seekSize   = dialogView.findViewById<SeekBar>(R.id.seekSize).apply { max = 295 }
+
+        val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
+        val colorPreview  = dialogView.findViewById<TextView>(R.id.colorPreview)
+
+        // 新增
+        val seekAlpha     = dialogView.findViewById<SeekBar>(R.id.seekAlpha).apply { max = 100 }
+        val textAlpha     = dialogView.findViewById<TextView>(R.id.textAlpha)
+        val switchUnifont = dialogView.findViewById<Switch>(R.id.switchUseUnifont)
+
+        // 原读取
         editText.setText(watermarkText)
-        seekRed.progress = Color.red(textColor)
+        seekRed.progress   = Color.red(textColor)
         seekGreen.progress = Color.green(textColor)
-        seekBlue.progress = Color.blue(textColor)
+        seekBlue.progress  = Color.blue(textColor)
         switchShadow.isChecked = shadowEnabled
-        seekSize.progress = fontSize - 5
+        seekSize.progress  = fontSize - 5
         switchRainbow.isChecked = rainbowEnabled
+
+        // 新增读取
         seekAlpha.progress = alphaValue
-        textAlpha.text = "透明度: $alphaValue%"
-        switchUseUnifont.isChecked = useUnifont
+        textAlpha.text     = "透明度: $alphaValue%"
+        switchUnifont.isChecked = useUnifont
 
         fun updateColorPreview() {
             val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
             colorPreview.setBackgroundColor(color)
         }
-
         updateColorPreview()
 
         seekRed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateColorPreview()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
-
         seekGreen.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateColorPreview()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
-
         seekBlue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateColorPreview()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
-
         seekAlpha.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                alphaValue = progress
-                textAlpha.text = "透明度: $progress%"
+            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) {
+                textAlpha.text = "透明度: $p%"
             }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
 
-        val dialog = AlertDialog.Builder(appContext)
+        AlertDialog.Builder(appContext)
             .setTitle("配置水印")
             .setView(dialogView)
             .setPositiveButton("确定") { _, _ ->
                 watermarkText = editText.text.toString()
-                val red = seekRed.progress
-                val green = seekGreen.progress
-                val blue = seekBlue.progress
-                textColor = Color.rgb(red, green, blue)
+                textColor = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
                 shadowEnabled = switchShadow.isChecked
-                fontSize = seekSize.progress + 5
+                fontSize       = seekSize.progress + 5
                 rainbowEnabled = switchRainbow.isChecked
-                alphaValue = seekAlpha.progress
-                useUnifont = switchUseUnifont.isChecked
+                alphaValue     = seekAlpha.progress
+                useUnifont     = switchUnifont.isChecked
 
                 prefs.edit()
                     .putString("text", watermarkText)
@@ -196,32 +186,27 @@ class ClientOverlay : OverlayWindow() {
             }
             .setNegativeButton("取消", null)
             .create()
-
-        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-        dialog.show()
+            .apply { window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) }
+            .show()
     }
 
     @Composable
     override fun Content() {
         if (!isOverlayEnabled()) return
 
-        val fontFamily = if (useUnifont) {
+        val fontFamily = if (useUnifont)
             FontFamily(Font(R.font.unifont))
-        } else {
+        else
             FontFamily.Default
-        }
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
-
         LaunchedEffect(rainbowEnabled) {
-            if (rainbowEnabled) {
-                while (true) {
-                    val hue = (System.currentTimeMillis() % 3600L) / 10f
-                    rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
-                    delay(50L)
-                }
+            if (rainbowEnabled) while (true) {
+                val hue = (System.currentTimeMillis() % 3600L) / 10f
+                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
+                delay(50L)
             }
         }
 
@@ -246,7 +231,6 @@ class ClientOverlay : OverlayWindow() {
                     modifier = Modifier.offset(x = 1.dp, y = 1.dp)
                 )
             }
-
             Text(
                 text = text,
                 fontSize = fontSize.sp,
