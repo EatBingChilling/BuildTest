@@ -57,7 +57,7 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
     private object Vanilla {
         fun handlePacket(interceptablePacket: InterceptablePacket) {
             if (interceptablePacket.packet is MovePlayerPacket) {
-                interceptablePacket.isOnGround = false
+                interceptablePacket.OnGround = false
             }
         }
     }
