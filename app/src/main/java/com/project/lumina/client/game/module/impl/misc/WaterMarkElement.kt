@@ -1,5 +1,7 @@
 package com.project.lumina.client.game.module.impl.misc
 
+import android.os.Handler
+import android.os.Looper
 import com.project.lumina.client.game.InterceptablePacket
 import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.constructors.CheatCategory
@@ -15,14 +17,17 @@ class WaterMarkElement(
     iconResId = iconResId
 ) {
 
+    private val handler = Handler(Looper.getMainLooper())
+
     override fun onEnabled() {
         super.onEnabled()
-
         try {
             if (isSessionCreated) {
-                ClientOverlay.setOverlayEnabled(enabled = true)
+                ClientOverlay.setOverlayEnabled(true)
                 ClientOverlay.showOverlay()
-                ClientOverlay.showConfigDialog()
+                handler.postDelayed({
+                    ClientOverlay.showConfigDialog()
+                }, 100)
             } else {
                 println("Session not created, cannot enable WaterMark overlay.")
             }
@@ -33,8 +38,9 @@ class WaterMarkElement(
 
     override fun onDisabled() {
         super.onDisabled()
-        ClientOverlay.setOverlayEnabled(enabled = false)
+        ClientOverlay.setOverlayEnabled(false)
         ClientOverlay.dismissOverlay()
+        handler.removeCallbacksAndMessages(null)
     }
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
