@@ -26,6 +26,7 @@ import com.project.lumina.client.game.module.impl.world.AutoWalkElement
 import com.project.lumina.client.game.module.impl.motion.BhopElement
 import com.project.lumina.client.game.module.impl.combat.DamageBoostElement
 import com.project.lumina.client.game.module.impl.motion.FlyElement
+import com.project.lumina.client.game.module.impl.combat.KillauraCDElement
 import com.project.lumina.client.game.module.impl.world.FollowBotElement
 import com.project.lumina.client.game.module.impl.motion.FullStopElement
 import com.project.lumina.client.game.module.impl.motion.GlideElement
@@ -83,6 +84,7 @@ object RemModuleManager {
             add(DesyncElement())
             add(PositionLoggerElement())
             add(MotionFlyElement())
+            add(KillauraCDElement())
             add(FreeCameraElement())
             add(KillauraElement())
             add(KillauraABElement())

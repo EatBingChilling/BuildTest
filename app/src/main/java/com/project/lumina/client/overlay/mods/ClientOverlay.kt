@@ -101,93 +101,142 @@ class ClientOverlay : OverlayWindow() {
     }
 
     fun showConfigDialog() {
-        val dialogView = LayoutInflater.from(appContext)
-            .inflate(R.layout.overlay_config_dialog, null)
+        try {
+            val dialogView = LayoutInflater.from(appContext)
+                .inflate(R.layout.overlay_config_dialog, null)
 
-        val editText   = dialogView.findViewById<EditText>(R.id.editText)
-        val seekRed    = dialogView.findViewById<SeekBar>(R.id.seekRed)
-        val seekGreen  = dialogView.findViewById<SeekBar>(R.id.seekGreen)
-        val seekBlue   = dialogView.findViewById<SeekBar>(R.id.seekBlue)
-        val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
-        val seekSize   = dialogView.findViewById<SeekBar>(R.id.seekSize).apply { max = 295 }
+            val editText   = dialogView.findViewById<EditText>(R.id.editText)
+            val seekRed    = dialogView.findViewById<SeekBar>(R.id.seekRed)
+            val seekGreen  = dialogView.findViewById<SeekBar>(R.id.seekGreen)
+            val seekBlue   = dialogView.findViewById<SeekBar>(R.id.seekBlue)
+            val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
+            val seekSize   = dialogView.findViewById<SeekBar>(R.id.seekSize).apply { max = 295 }
 
-        val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
-        val colorPreview  = dialogView.findViewById<TextView>(R.id.colorPreview)
+            val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
+            val colorPreview  = dialogView.findViewById<TextView>(R.id.colorPreview)
 
-        // 新增
-        val seekAlpha     = dialogView.findViewById<SeekBar>(R.id.seekAlpha).apply { max = 100 }
-        val textAlpha     = dialogView.findViewById<TextView>(R.id.textAlpha)
-        val switchUnifont = dialogView.findViewById<Switch>(R.id.switchUseUnifont)
+            // 新增
+            val seekAlpha     = dialogView.findViewById<SeekBar>(R.id.seekAlpha).apply { max = 100 }
+            val textAlpha     = dialogView.findViewById<TextView>(R.id.textAlpha)
+            val switchUnifont = dialogView.findViewById<Switch>(R.id.switchUseUnifont)
 
-        // 原读取
-        editText.setText(watermarkText)
-        seekRed.progress   = Color.red(textColor)
-        seekGreen.progress = Color.green(textColor)
-        seekBlue.progress  = Color.blue(textColor)
-        switchShadow.isChecked = shadowEnabled
-        seekSize.progress  = fontSize - 5
-        switchRainbow.isChecked = rainbowEnabled
+            // 原读取
+            editText.setText(watermarkText)
+            seekRed.progress   = Color.red(textColor)
+            seekGreen.progress = Color.green(textColor)
+            seekBlue.progress  = Color.blue(textColor)
+            switchShadow.isChecked = shadowEnabled
+            seekSize.progress  = fontSize - 5
+            switchRainbow.isChecked = rainbowEnabled
 
-        // 新增读取
-        seekAlpha.progress = alphaValue
-        textAlpha.text     = "透明度: $alphaValue%"
-        switchUnifont.isChecked = useUnifont
+            // 新增读取
+            seekAlpha.progress = alphaValue
+            textAlpha.text     = "透明度: $alphaValue%"
+            switchUnifont.isChecked = useUnifont
 
-        fun updateColorPreview() {
-            val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
-            colorPreview.setBackgroundColor(color)
+            fun updateColorPreview() {
+                val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
+                colorPreview.setBackgroundColor(color)
+            }
+            updateColorPreview()
+
+            seekRed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+            seekGreen.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+            seekBlue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+            seekAlpha.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) {
+                    textAlpha.text = "透明度: $p%"
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+
+            // 创建包装上下文以支持 Dialog 主题
+            val dialogContext = android.view.ContextThemeWrapper(
+                appContext, 
+                android.R.style.Theme_Material_Dialog_Alert
+            )
+
+            val dialog = AlertDialog.Builder(dialogContext)
+                .setTitle("配置水印")
+                .setView(dialogView)
+                .setPositiveButton("确定") { _, _ ->
+                    watermarkText = editText.text.toString()
+                    textColor = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
+                    shadowEnabled = switchShadow.isChecked
+                    fontSize       = seekSize.progress + 5
+                    rainbowEnabled = switchRainbow.isChecked
+                    alphaValue     = seekAlpha.progress
+                    useUnifont     = switchUnifont.isChecked
+
+                    prefs.edit()
+                        .putString("text", watermarkText)
+                        .putInt("color", textColor)
+                        .putBoolean("shadow", shadowEnabled)
+                        .putInt("size", fontSize)
+                        .putBoolean("rainbow", rainbowEnabled)
+                        .putInt("alpha", alphaValue)
+                        .putBoolean("use_unifont", useUnifont)
+                        .apply()
+                }
+                .setNegativeButton("取消", null)
+                .create()
+
+            // 设置窗口参数
+            dialog.window?.let { window ->
+                window.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+                
+                // 设置窗口标志，确保可以获得焦点和触摸
+                window.addFlags(
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                )
+                
+                // 清除可能阻止显示的标志
+                window.clearFlags(
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                )
+                
+                // 设置窗口属性
+                val params = window.attributes
+                params.width = WindowManager.LayoutParams.WRAP_CONTENT
+                params.height = WindowManager.LayoutParams.WRAP_CONTENT
+                params.gravity = Gravity.CENTER
+                window.attributes = params
+            }
+
+            dialog.show()
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+            
+            // 如果上述方法失败，尝试简化版本
+            try {
+                val builder = AlertDialog.Builder(appContext)
+                builder.setTitle("配置水印")
+                builder.setMessage("配置对话框加载失败，请检查布局文件")
+                builder.setPositiveButton("确定", null)
+                
+                val fallbackDialog = builder.create()
+                fallbackDialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+                fallbackDialog.show()
+            } catch (fallbackException: Exception) {
+                fallbackException.printStackTrace()
+            }
         }
-        updateColorPreview()
-
-        seekRed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
-        })
-        seekGreen.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
-        })
-        seekBlue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
-        })
-        seekAlpha.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) {
-                textAlpha.text = "透明度: $p%"
-            }
-            override fun onStartTrackingTouch(sb: SeekBar?) {}
-            override fun onStopTrackingTouch(sb: SeekBar?) {}
-        })
-
-        AlertDialog.Builder(appContext)
-            .setTitle("配置水印")
-            .setView(dialogView)
-            .setPositiveButton("确定") { _, _ ->
-                watermarkText = editText.text.toString()
-                textColor = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
-                shadowEnabled = switchShadow.isChecked
-                fontSize       = seekSize.progress + 5
-                rainbowEnabled = switchRainbow.isChecked
-                alphaValue     = seekAlpha.progress
-                useUnifont     = switchUnifont.isChecked
-
-                prefs.edit()
-                    .putString("text", watermarkText)
-                    .putInt("color", textColor)
-                    .putBoolean("shadow", shadowEnabled)
-                    .putInt("size", fontSize)
-                    .putBoolean("rainbow", rainbowEnabled)
-                    .putInt("alpha", alphaValue)
-                    .putBoolean("use_unifont", useUnifont)
-                    .apply()
-            }
-            .setNegativeButton("取消", null)
-            .create()
-            .apply { window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) }
-            .show()
     }
 
     @Composable

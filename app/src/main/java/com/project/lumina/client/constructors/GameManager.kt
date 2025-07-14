@@ -7,6 +7,7 @@ import com.project.lumina.client.game.module.impl.combat.CritBotElement
 import com.project.lumina.client.game.module.impl.combat.InfiniteAuraElement
 import com.project.lumina.client.game.module.impl.combat.KillauraElement
 import com.project.lumina.client.game.module.impl.combat.KillauraABElement
+import com.project.lumina.client.game.module.impl.combat.KillauraCDElement
 import com.project.lumina.client.game.module.impl.combat.RotationAuraElement
 import com.project.lumina.client.game.module.impl.combat.QuickAttackElement
 import com.project.lumina.client.game.module.impl.world.StrafeElement
@@ -119,6 +120,7 @@ object GameManager {
             add(JitterFlyElement())
             add(PhaseElement())
             add(ReachElement())
+            add(KillauraCDElement())
             //add(MaceAuraElement())
             //add(CrystalAuraElement())
             add(AntiBotElement())

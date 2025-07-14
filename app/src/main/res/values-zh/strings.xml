@@ -261,5 +261,6 @@
     <string name="luminacn_dev">LuminaCN 开发者: 十一, Phoen1x_</string>
     
     <string name="module_antibot_display_name">防假人</string>
+        <string name="module_killauracd_display_name">杀戮光环3（测试）</string>
     
 </resources>
