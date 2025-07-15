@@ -40,9 +40,13 @@ import com.project.lumina.client.game.module.api.setting.stringValue
 import com.project.lumina.client.game.InterceptablePacket
 import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.constructors.CheatCategory
+import com.project.lumina.client.game.event.handle
 import com.project.lumina.client.util.AssetManager
+import org.cloudburstmc.math.vector.Vector3f
 import org.cloudburstmc.protocol.bedrock.packet.MovePlayerPacket
 import org.cloudburstmc.protocol.bedrock.packet.SetEntityMotionPacket
+import org.cloudburstmc.protocol.bedrock.packet.PlayerActionPacket
+import org.cloudburstmc.protocol.bedrock.data.PlayerActionType
 
 class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Element(
     name = "Criticals",
@@ -51,10 +55,13 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
     displayNameResId = AssetManager.getString("module_critbot_display_name")
 ) {
 
-    private val mode by stringValue(this, "Mode", "Vanilla", listOf("Vanilla", "Packet"))
+    private var modeValue by intValue("Mode", 0, 0..1)
+    private val mode by stringValue(this, "Mode", "Vanilla", listOf("Vanilla", "Jump"))
+
+    private var canJump = true
 
     private object Vanilla {
-        fun handlePacket(interceptablePacket: InterceptablePacket) {
+        fun handlePacket(interceptablePacket: InterceptablePacket, parent: CritBotElement) {
             if (interceptablePacket.packet is MovePlayerPacket) {
                 val movePacket = interceptablePacket.packet as MovePlayerPacket
                 movePacket.onGround = false
@@ -62,29 +69,43 @@ class CritBotElement(iconResId: Int = AssetManager.getAsset("ic_angle")) : Eleme
         }
     }
 
-    private object Packet {
-        fun handlePacket(interceptablePacket: InterceptablePacket) {
+    private object Jump {
+        fun handlePacket(interceptablePacket: InterceptablePacket, parent: CritBotElement) {
+            if (!parent.isSessionCreated) return
 
+            when (val packet = interceptablePacket.packet) {
+                is MovePlayerPacket -> {
+                    if (packet.onGround) {
+                        parent.canJump = true
+                    }
+                }
+
+                is PlayerActionPacket -> {
+                    if (packet.action == PlayerActionType.START_BREAK && parent.canJump) {
+                        val motionPacket = SetEntityMotionPacket().apply {
+                            runtimeEntityId = parent.session.localPlayer.runtimeEntityId
+                            motion = Vector3f.from(0f, 0.42f, 0f)
+                        }
+                        parent.session.clientBound(motionPacket)
+                        parent.canJump = false
+                    }
+                }
+            }
         }
     }
 
     override fun beforePacketBound(interceptablePacket: InterceptablePacket) {
-        if (!isEnabled) {
+        if (!isEnabled || !isSessionCreated) return
+
+        val packet = interceptablePacket.packet
+        if (packet is SetEntityMotionPacket &&
+            packet.runtimeEntityId != session.localPlayer.runtimeEntityId) {
             return
         }
 
-        if (interceptablePacket.packet is SetEntityMotionPacket || interceptablePacket.packet is MovePlayerPacket) {
-            val packet = interceptablePacket.packet
-            if (packet is SetEntityMotionPacket && packet.runtimeEntityId == session.localPlayer.runtimeEntityId) {
-                when (mode) {
-                    "Vanilla" -> Vanilla.handlePacket(interceptablePacket)
-                    "Packet" -> Packet.handlePacket(interceptablePacket)
-                }
-            } else if (packet is MovePlayerPacket && packet.runtimeEntityId == session.localPlayer.runtimeEntityId) {
-                if (mode == "Vanilla") {
-                    Vanilla.handlePacket(interceptablePacket)
-                }
-            }
+        when (mode) {
+            "Vanilla" -> Vanilla.handlePacket(interceptablePacket, this)
+            "Jump" -> Jump.handlePacket(interceptablePacket, this)
         }
     }
 }
