@@ -17,16 +17,12 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
-import com.project.lumina.client.R
+import androidx.lifecycle.*
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
 
-class ClientOverlay : OverlayWindow() {
+class ClientOverlay : OverlayWindow(), ViewModelStoreOwner, LifecycleOwner {
 
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
@@ -57,10 +53,15 @@ class ClientOverlay : OverlayWindow() {
     override val layoutParams: WindowManager.LayoutParams
         get() = _layoutParams
 
-    // Override the viewModelStore and lifecycleOwner from OverlayWindow
-    override val viewModelStore: ViewModelStore by lazy { ViewModelStore() } // Or however your ViewModelStore is created
-    override val lifecycleOwner: LifecycleOwner
-        get() = this // Assuming ClientOverlay can act as a LifecycleOwner
+    // 实现 ViewModelStoreOwner
+    private val _viewModelStore = ViewModelStore()
+    override val viewModelStore: ViewModelStore
+        get() = _viewModelStore
+
+    // 实现 LifecycleOwner
+    private val _lifecycleOwner = OverlayLifecycleOwner()
+    override val lifecycle: Lifecycle
+        get() = _lifecycleOwner.lifecycle
 
     companion object {
         private var overlayInstance: ClientOverlay? = null
@@ -356,5 +357,20 @@ fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
                 modifier = Modifier.weight(1f)
             )
         }
+    }
+}
+
+// 内部实现 OverlayLifecycleOwner
+class OverlayLifecycleOwner : LifecycleOwner {
+    private val registry = LifecycleRegistry(this)
+    override val lifecycle: Lifecycle
+        get() = registry
+
+    init {
+        registry.currentState = Lifecycle.State.STARTED
+    }
+
+    fun destroy() {
+        registry.currentState = Lifecycle.State.DESTROYED
     }
 }
