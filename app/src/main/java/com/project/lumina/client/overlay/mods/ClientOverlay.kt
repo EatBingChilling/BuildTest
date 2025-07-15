@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.os.Bundle
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.foundation.layout.*
@@ -14,17 +15,72 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSavedStateRegistryOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.*
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
+
+/**
+ * A helper class that implements the necessary "owner" interfaces for Compose UI
+ * to function correctly in a window that is not attached to an Activity.
+ */
+private class WindowLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val viewModelStore = ViewModelStore()
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+
+    override val lifecycle: Lifecycle
+        get() = lifecycleRegistry
+
+    override val viewModelStore: ViewModelStore
+        get() = viewModelStore
+
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateRegistryController.savedStateRegistry
+
+    /**
+     * Call this when the overlay window is created.
+     */
+    fun onCreate() {
+        savedStateRegistryController.performRestore(null) // Pass a Bundle here if you need to restore state
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    }
+
+    /**
+     * Call this when the overlay window is shown or brought to the foreground.
+     */
+    fun onStart() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+
+    /**
+     * Call this when the overlay window is destroyed.
+     */
+    fun onDestroy() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        viewModelStore.clear()
+    }
+}
+
 
 class ClientOverlay : OverlayWindow() {
 
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
+
+    // The custom lifecycle owner for this window
+    private val lifecycleOwner = WindowLifecycleOwner()
 
     // State for the watermark properties
     private var watermarkText by mutableStateOf(prefs.getString("text", "") ?: "")
@@ -57,6 +113,18 @@ class ClientOverlay : OverlayWindow() {
     override val layoutParams: WindowManager.LayoutParams
         get() = _layoutParams
 
+    // Initialize the lifecycle when the overlay is created
+    init {
+        lifecycleOwner.onCreate()
+        lifecycleOwner.onStart()
+    }
+
+    // Clean up the lifecycle when the overlay is destroyed
+    fun destroy() {
+        lifecycleOwner.onDestroy()
+    }
+
+
     companion object {
         private var overlayInstance: ClientOverlay? = null
         private var shouldShowOverlay = true
@@ -80,7 +148,10 @@ class ClientOverlay : OverlayWindow() {
 
         fun dismissOverlay() {
             try {
-                overlayInstance?.let { OverlayManager.dismissOverlayWindow(it) }
+                overlayInstance?.let {
+                    it.destroy() // IMPORTANT: Clean up the lifecycle
+                    OverlayManager.dismissOverlayWindow(it)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -104,99 +175,107 @@ class ClientOverlay : OverlayWindow() {
 
     @Composable
     override fun Content() {
-        if (!isOverlayEnabled()) return
-
-        // --- Watermark Display Logic (Unchanged) ---
-        val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
-
-        var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
-        LaunchedEffect(rainbowEnabled) {
-            if (rainbowEnabled) while (true) {
-                val hue = (System.currentTimeMillis() % 3600L) / 10f
-                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
-                delay(50L)
-            }
-        }
-
-        val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
-        val finalColor = baseColor.copy(alpha = alphaValue / 100f)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+        // Provide the custom owners to the entire Compose hierarchy
+        CompositionLocalProvider(
+            LocalLifecycleOwner provides lifecycleOwner,
+            LocalViewModelStoreOwner provides lifecycleOwner,
+            LocalSavedStateRegistryOwner provides lifecycleOwner
         ) {
-            if (shadowEnabled) {
+            if (!isOverlayEnabled()) return@CompositionLocalProvider
+
+            // --- Watermark Display Logic (Unchanged) ---
+            val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
+
+            var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
+            LaunchedEffect(rainbowEnabled) {
+                if (rainbowEnabled) while (true) {
+                    val hue = (System.currentTimeMillis() % 3600L) / 10f
+                    rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
+                    delay(50L)
+                }
+            }
+
+            val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
+            val finalColor = baseColor.copy(alpha = alphaValue / 100f)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (shadowEnabled) {
+                    Text(
+                        text = text,
+                        fontSize = fontSize.sp,
+                        color = ComposeColor.Black.copy(alpha = 0.15f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = (fontSize * 1.5).sp,
+                        modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+                    )
+                }
                 Text(
                     text = text,
                     fontSize = fontSize.sp,
-                    color = ComposeColor.Black.copy(alpha = 0.15f),
+                    color = finalColor,
                     textAlign = TextAlign.Center,
-                    lineHeight = (fontSize * 1.5).sp,
-                    modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+                    lineHeight = (fontSize * 1.2).sp
                 )
             }
-            Text(
-                text = text,
-                fontSize = fontSize.sp,
-                color = finalColor,
-                textAlign = TextAlign.Center,
-                lineHeight = (fontSize * 1.2).sp
-            )
-        }
 
-        // --- Material Design 3 AlertDialog ---
-        if (showDialog) {
-            AlertDialog(
-                onDismissRequest = { showDialog = false },
-                title = { Text("配置水印") },
-                text = {
-                    DialogConfigurationUI(
-                        watermarkText = watermarkText,
-                        textColor = textColor,
-                        shadowEnabled = shadowEnabled,
-                        fontSize = fontSize,
-                        rainbowEnabled = rainbowEnabled,
-                        alphaValue = alphaValue,
-                        useUnifont = useUnifont,
-                        onWatermarkTextChanged = { watermarkText = it },
-                        onTextColorChanged = { textColor = it },
-                        onShadowEnabledChanged = { shadowEnabled = it },
-                        onFontSizeChanged = { fontSize = it },
-                        onRainbowEnabledChanged = { rainbowEnabled = it },
-                        onAlphaValueChanged = { alphaValue = it },
-                        onUseUnifontChanged = { useUnifont = it }
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            // Save preferences and dismiss
-                            prefs.edit()
-                                .putString("text", watermarkText)
-                                .putInt("color", textColor)
-                                .putBoolean("shadow", shadowEnabled)
-                                .putInt("size", fontSize)
-                                .putBoolean("rainbow", rainbowEnabled)
-                                .putInt("alpha", alphaValue)
-                                .putBoolean("use_unifont", useUnifont)
-                                .apply()
-                            showDialog = false
+            // --- Material Design 3 AlertDialog (Now works correctly) ---
+            if (showDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDialog = false },
+                    title = { Text("配置水印") },
+                    text = {
+                        DialogConfigurationUI(
+                            watermarkText = watermarkText,
+                            textColor = textColor,
+                            shadowEnabled = shadowEnabled,
+                            fontSize = fontSize,
+                            rainbowEnabled = rainbowEnabled,
+                            alphaValue = alphaValue,
+                            useUnifont = useUnifont,
+                            onWatermarkTextChanged = { watermarkText = it },
+                            onTextColorChanged = { textColor = it },
+                            onShadowEnabledChanged = { shadowEnabled = it },
+                            onFontSizeChanged = { fontSize = it },
+                            onRainbowEnabledChanged = { rainbowEnabled = it },
+                            onAlphaValueChanged = { alphaValue = it },
+                            onUseUnifontChanged = { useUnifont = it }
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                // Save preferences and dismiss
+                                prefs.edit()
+                                    .putString("text", watermarkText)
+                                    .putInt("color", textColor)
+                                    .putBoolean("shadow", shadowEnabled)
+                                    .putInt("size", fontSize)
+                                    .putBoolean("rainbow", rainbowEnabled)
+                                    .putInt("alpha", alphaValue)
+                                    .putBoolean("use_unifont", useUnifont)
+                                    .apply()
+                                showDialog = false
+                            }
+                        ) {
+                            Text("确定")
                         }
-                    ) {
-                        Text("确定")
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDialog = false }) {
+                            Text("取消")
+                        }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDialog = false }) {
-                        Text("取消")
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
+
 
 @Composable
 fun DialogConfigurationUI(
