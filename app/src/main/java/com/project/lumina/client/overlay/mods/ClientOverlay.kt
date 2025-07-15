@@ -6,22 +6,18 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.WindowManager
-import android.widget.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.project.lumina.client.R
+import com.project.lumina.client.R // 确保R文件正确导入
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
@@ -31,15 +27,13 @@ class ClientOverlay : OverlayWindow() {
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
-    private var watermarkText   by mutableStateOf(prefs.getString("text", "") ?: "")
-    private var textColor       by mutableStateOf(prefs.getInt("color", Color.WHITE))
-    private var shadowEnabled   by mutableStateOf(prefs.getBoolean("shadow", false))
-    private var fontSize        by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
-    private var rainbowEnabled  by mutableStateOf(prefs.getBoolean("rainbow", false))
-    // 新增：透明度 0-100
-    private var alphaValue      by mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
-    // 新增：是否使用 Unifont
-    private var useUnifont      by mutableStateOf(prefs.getBoolean("use_unifont", true))
+    private var watermarkText by mutableStateOf(prefs.getString("text", "") ?: "")
+    private var textColor by mutableStateOf(prefs.getInt("color", Color.WHITE))
+    private var shadowEnabled by mutableStateOf(prefs.getBoolean("shadow", false))
+    private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
+    private var rainbowEnabled by mutableStateOf(prefs.getBoolean("rainbow", false))
+    private var alphaValue by mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
+    private var useUnifont by mutableStateOf(prefs.getBoolean("use_unifont", true))
 
     private val _layoutParams by lazy {
         super.layoutParams.apply {
@@ -48,7 +42,7 @@ class ClientOverlay : OverlayWindow() {
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            width  = WindowManager.LayoutParams.MATCH_PARENT
+            width = WindowManager.LayoutParams.MATCH_PARENT
             height = WindowManager.LayoutParams.MATCH_PARENT
             gravity = Gravity.CENTER
             x = 0
@@ -102,85 +96,36 @@ class ClientOverlay : OverlayWindow() {
 
     fun showConfigDialog() {
         try {
-            val dialogView = LayoutInflater.from(appContext)
-                .inflate(R.layout.overlay_config_dialog, null)
-
-            val editText   = dialogView.findViewById<EditText>(R.id.editText)
-            val seekRed    = dialogView.findViewById<SeekBar>(R.id.seekRed)
-            val seekGreen  = dialogView.findViewById<SeekBar>(R.id.seekGreen)
-            val seekBlue   = dialogView.findViewById<SeekBar>(R.id.seekBlue)
-            val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
-            val seekSize   = dialogView.findViewById<SeekBar>(R.id.seekSize).apply { max = 295 }
-
-            val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
-            val colorPreview  = dialogView.findViewById<TextView>(R.id.colorPreview)
-
-            // 新增
-            val seekAlpha     = dialogView.findViewById<SeekBar>(R.id.seekAlpha).apply { max = 100 }
-            val textAlpha     = dialogView.findViewById<TextView>(R.id.textAlpha)
-            val switchUnifont = dialogView.findViewById<Switch>(R.id.switchUseUnifont)
-
-            // 原读取
-            editText.setText(watermarkText)
-            seekRed.progress   = Color.red(textColor)
-            seekGreen.progress = Color.green(textColor)
-            seekBlue.progress  = Color.blue(textColor)
-            switchShadow.isChecked = shadowEnabled
-            seekSize.progress  = fontSize - 5
-            switchRainbow.isChecked = rainbowEnabled
-
-            // 新增读取
-            seekAlpha.progress = alphaValue
-            textAlpha.text     = "透明度: $alphaValue%"
-            switchUnifont.isChecked = useUnifont
-
-            fun updateColorPreview() {
-                val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
-                colorPreview.setBackgroundColor(color)
-            }
-            updateColorPreview()
-
-            seekRed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-            seekGreen.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-            seekBlue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) = updateColorPreview()
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-            seekAlpha.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, p: Int, from: Boolean) {
-                    textAlpha.text = "透明度: $p%"
-                }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-
-            // 创建包装上下文以支持 Dialog 主题
             val dialogContext = android.view.ContextThemeWrapper(
-                appContext, 
+                appContext,
                 android.R.style.Theme_Material_Dialog_Alert
             )
 
             val dialog = AlertDialog.Builder(dialogContext)
                 .setTitle("配置水印")
-                .setView(dialogView)
+                .setView(ComposeView(dialogContext).apply {
+                    setContent {
+                        MaterialTheme {
+                            ConfigDialogContent(
+                                watermarkText = watermarkText,
+                                textColor = textColor,
+                                shadowEnabled = shadowEnabled,
+                                fontSize = fontSize,
+                                rainbowEnabled = rainbowEnabled,
+                                alphaValue = alphaValue,
+                                useUnifont = useUnifont,
+                                onWatermarkTextChanged = { watermarkText = it },
+                                onTextColorChanged = { textColor = it },
+                                onShadowEnabledChanged = { shadowEnabled = it },
+                                onFontSizeChanged = { fontSize = it },
+                                onRainbowEnabledChanged = { rainbowEnabled = it },
+                                onAlphaValueChanged = { alphaValue = it },
+                                onUseUnifontChanged = { useUnifont = it }
+                            )
+                        }
+                    }
+                })
                 .setPositiveButton("确定") { _, _ ->
-                    watermarkText = editText.text.toString()
-                    textColor = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
-                    shadowEnabled = switchShadow.isChecked
-                    fontSize       = seekSize.progress + 5
-                    rainbowEnabled = switchRainbow.isChecked
-                    alphaValue     = seekAlpha.progress
-                    useUnifont     = switchUnifont.isChecked
-
                     prefs.edit()
                         .putString("text", watermarkText)
                         .putInt("color", textColor)
@@ -194,23 +139,16 @@ class ClientOverlay : OverlayWindow() {
                 .setNegativeButton("取消", null)
                 .create()
 
-            // 设置窗口参数
             dialog.window?.let { window ->
                 window.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-                
-                // 设置窗口标志，确保可以获得焦点和触摸
                 window.addFlags(
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
                 )
-                
-                // 清除可能阻止显示的标志
                 window.clearFlags(
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                 )
-                
-                // 设置窗口属性
                 val params = window.attributes
                 params.width = WindowManager.LayoutParams.WRAP_CONTENT
                 params.height = WindowManager.LayoutParams.WRAP_CONTENT
@@ -219,17 +157,16 @@ class ClientOverlay : OverlayWindow() {
             }
 
             dialog.show()
-            
+
         } catch (e: Exception) {
             e.printStackTrace()
-            
-            // 如果上述方法失败，尝试简化版本
+            // Fallback
             try {
                 val builder = AlertDialog.Builder(appContext)
                 builder.setTitle("配置水印")
                 builder.setMessage("配置对话框加载失败，请检查布局文件")
                 builder.setPositiveButton("确定", null)
-                
+
                 val fallbackDialog = builder.create()
                 fallbackDialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
                 fallbackDialog.show()
@@ -242,11 +179,6 @@ class ClientOverlay : OverlayWindow() {
     @Composable
     override fun Content() {
         if (!isOverlayEnabled()) return
-
-        val fontFamily = if (useUnifont)
-            FontFamily(Font(R.font.unifont))
-        else
-            FontFamily.Default
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
@@ -272,22 +204,147 @@ class ClientOverlay : OverlayWindow() {
                 Text(
                     text = text,
                     fontSize = fontSize.sp,
-                    fontFamily = fontFamily,
                     color = ComposeColor.Black.copy(alpha = 0.15f),
                     textAlign = TextAlign.Center,
                     lineHeight = (fontSize * 1.5).sp,
-                    letterSpacing = (fontSize * 0.1).sp,
                     modifier = Modifier.offset(x = 1.dp, y = 1.dp)
                 )
             }
             Text(
                 text = text,
                 fontSize = fontSize.sp,
-                fontFamily = fontFamily,
                 color = finalColor,
                 textAlign = TextAlign.Center,
-                lineHeight = (fontSize * 1.2).sp,
-                letterSpacing = (fontSize * 0.1).sp
+                lineHeight = (fontSize * 1.2).sp
+            )
+        }
+    }
+}
+
+@Composable
+fun ConfigDialogContent(
+    watermarkText: String,
+    textColor: Int,
+    shadowEnabled: Boolean,
+    fontSize: Int,
+    rainbowEnabled: Boolean,
+    alphaValue: Int,
+    useUnifont: Boolean,
+    onWatermarkTextChanged: (String) -> Unit,
+    onTextColorChanged: (Int) -> Unit,
+    onShadowEnabledChanged: (Boolean) -> Unit,
+    onFontSizeChanged: (Int) -> Unit,
+    onRainbowEnabledChanged: (Boolean) -> Unit,
+    onAlphaValueChanged: (Int) -> Unit,
+    onUseUnifontChanged: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = watermarkText,
+            onValueChange = onWatermarkTextChanged,
+            label = { Text("水印文字") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Color Picker (using Sliders)
+        Text("文字颜色")
+        ColorSlider(
+            color = textColor,
+            onColorChanged = onTextColorChanged
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("阴影效果")
+            Spacer(modifier = Modifier.weight(1f))
+            Switch(checked = shadowEnabled, onCheckedChange = onShadowEnabledChanged)
+        }
+
+        // Font Size Slider
+        Text("字体大小: $fontSize")
+        Slider(
+            value = fontSize.toFloat(),
+            onValueChange = { onFontSizeChanged(it.toInt()) },
+            valueRange = 5f..300f,
+            steps = 295
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("彩虹效果")
+            Spacer(modifier = Modifier.weight(1f))
+            Switch(checked = rainbowEnabled, onCheckedChange = onRainbowEnabledChanged)
+        }
+
+        // Alpha Slider
+        Text("透明度: $alphaValue%")
+        Slider(
+            value = alphaValue.toFloat(),
+            onValueChange = { onAlphaValueChanged(it.toInt()) },
+            valueRange = 0f..100f,
+            steps = 100
+        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("使用Unifont字体")
+            Spacer(modifier = Modifier.weight(1f))
+            Switch(checked = useUnifont, onCheckedChange = onUseUnifontChanged)
+        }
+    }
+}
+
+@Composable
+fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("R:")
+            Slider(
+                value = Color.red(color).toFloat() / 255f,
+                onValueChange = {
+                    val newColor = Color.rgb(
+                        (it * 255).toInt(),
+                        Color.green(color),
+                        Color.blue(color)
+                    )
+                    onColorChanged(newColor)
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("G:")
+            Slider(
+                value = Color.green(color).toFloat() / 255f,
+                onValueChange = {
+                    val newColor = Color.rgb(
+                        Color.red(color),
+                        (it * 255).toInt(),
+                        Color.blue(color)
+                    )
+                    onColorChanged(newColor)
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("B:")
+            Slider(
+                value = Color.blue(color).toFloat() / 255f,
+                onValueChange = {
+                    val newColor = Color.rgb(
+                        Color.red(color),
+                        Color.green(color),
+                        (it * 255).toInt()
+                    )
+                    onColorChanged(newColor)
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier.weight(1f)
             )
         }
     }
