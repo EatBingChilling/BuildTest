@@ -1,6 +1,6 @@
+// 文件：app/src/main/java/com/project/lumina/client/overlay/mods/ClientOverlay.kt
 package com.project.lumina.client.overlay.mods
 
-import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -22,10 +22,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import com.project.lumina.client.R              // 显式导入 R
+import androidx.lifecycle.*
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
@@ -104,78 +105,43 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
         fun showConfigDialog() = overlayInstance?.showConfigDialog()
     }
 
-    /* -------------------- 配置对话框 -------------------- */
+    /* -------------------- 配置弹窗 -------------------- */
     fun showConfigDialog() {
         if (!Settings.canDrawOverlays(appContext)) {
             val intent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:${appContext.packageName}")
-            )
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
             appContext.startActivity(intent)
             return
         }
 
-        val dialogContext = android.view.ContextThemeWrapper(
-            appContext,
-            android.R.style.Theme_Material_Dialog_Alert
-        )
-
-        val dialog = AlertDialog.Builder(dialogContext)
-            .setTitle("配置水印")
-            .setView(ComposeView(dialogContext).apply {
+        DialogComposeLifecycleOwner().use { owner ->
+            val dialog = ComposeView(appContext).apply {
+                setViewTreeLifecycleOwner(owner)
+                setViewTreeViewModelStoreOwner(owner)
+                setViewTreeSavedStateRegistryOwner(owner)
                 setContent {
-                    MaterialTheme {
-                        ConfigDialogContent(
-                            watermarkText = watermarkText,
-                            textColor = textColor,
-                            shadowEnabled = shadowEnabled,
-                            fontSize = fontSize,
-                            rainbowEnabled = rainbowEnabled,
-                            alphaValue = alphaValue,
-                            useUnifont = useUnifont,
-                            onWatermarkTextChanged = { watermarkText = it },
-                            onTextColorChanged = { textColor = it },
-                            onShadowEnabledChanged = { shadowEnabled = it },
-                            onFontSizeChanged = { fontSize = it },
-                            onRainbowEnabledChanged = { rainbowEnabled = it },
-                            onAlphaValueChanged = { alphaValue = it },
-                            onUseUnifontChanged = { useUnifont = it }
-                        )
+                    MaterialTheme(
+                        colorScheme = dynamicColorSchemeWithFallback()   // M3 动态配色
+                    ) {
+                        ConfigDialog()
                     }
                 }
-            })
-            .setPositiveButton("确定") { _, _ ->
-                prefs.edit()
-                    .putString("text", watermarkText)
-                    .putInt("color", textColor)
-                    .putBoolean("shadow", shadowEnabled)
-                    .putInt("size", fontSize)
-                    .putBoolean("rainbow", rainbowEnabled)
-                    .putInt("alpha", alphaValue)
-                    .putBoolean("use_unifont", useUnifont)
-                    .apply()
             }
-            .setNegativeButton("取消", null)
-            .create()
 
-        dialog.window?.apply {
-            setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-            addFlags(
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-            )
-            clearFlags(
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            )
-            attributes = attributes.apply {
+            val windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val params = WindowManager.LayoutParams().apply {
+                type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 width = WindowManager.LayoutParams.WRAP_CONTENT
                 height = WindowManager.LayoutParams.WRAP_CONTENT
                 gravity = Gravity.CENTER
+                flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             }
+            windowManager.addView(dialog, params)
         }
-        dialog.show()
     }
 
     /* -------------------- 水印内容 -------------------- */
@@ -184,9 +150,7 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
         if (!isOverlayEnabled()) return
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
-
-        // 显式使用命名参数，避免 R.font 解析问题
-        val unifontFamily = FontFamily(Font(resId = R.font.packet))
+        val unifontFamily = FontFamily(Font(resId = R.font.unifont))
         val defaultFamily = FontFamily.Default
 
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
@@ -228,132 +192,156 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             )
         }
     }
-}
 
-/* -------------------- 配置对话框 Composable -------------------- */
-@Composable
-fun ConfigDialogContent(
-    watermarkText: String,
-    textColor: Int,
-    shadowEnabled: Boolean,
-    fontSize: Int,
-    rainbowEnabled: Boolean,
-    alphaValue: Int,
-    useUnifont: Boolean,
-    onWatermarkTextChanged: (String) -> Unit,
-    onTextColorChanged: (Int) -> Unit,
-    onShadowEnabledChanged: (Boolean) -> Unit,
-    onFontSizeChanged: (Int) -> Unit,
-    onRainbowEnabledChanged: (Boolean) -> Unit,
-    onAlphaValueChanged: (Int) -> Unit,
-    onUseUnifontChanged: (Boolean) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        OutlinedTextField(
-            value = watermarkText,
-            onValueChange = onWatermarkTextChanged,
-            label = { Text("水印文字") },
-            modifier = Modifier.fillMaxWidth()
+    /* -------------------- 配置内容 -------------------- */
+    @Composable
+    private fun ConfigDialog() {
+        var open by remember { mutableStateOf(true) }
+        if (!open) return
+
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    OutlinedTextField(
+                        value = watermarkText,
+                        onValueChange = { watermarkText = it },
+                        label = { Text("水印文字") },
+                        singleLine = true
+                    )
+
+                    Text("文字颜色")
+                    ColorSlider(color = textColor, onColorChanged = { textColor = it })
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("阴影")
+                        Spacer(Modifier.weight(1f))
+                        Switch(checked = shadowEnabled, onCheckedChange = { shadowEnabled = it })
+                    }
+
+                    Text("字体大小：$fontSize")
+                    Slider(
+                        value = fontSize.toFloat(),
+                        onValueChange = { fontSize = it.toInt() },
+                        valueRange = 5f..300f
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("彩虹")
+                        Spacer(Modifier.weight(1f))
+                        Switch(checked = rainbowEnabled, onCheckedChange = { rainbowEnabled = it })
+                    }
+
+                    Text("透明度：$alphaValue%")
+                    Slider(
+                        value = alphaValue.toFloat(),
+                        onValueChange = { alphaValue = it.toInt() },
+                        valueRange = 0f..100f
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Unifont")
+                        Spacer(Modifier.weight(1f))
+                        Switch(checked = useUnifont, onCheckedChange = { useUnifont = it })
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    prefs.edit()
+                        .putString("text", watermarkText)
+                        .putInt("color", textColor)
+                        .putBoolean("shadow", shadowEnabled)
+                        .putInt("size", fontSize)
+                        .putBoolean("rainbow", rainbowEnabled)
+                        .putInt("alpha", alphaValue)
+                        .putBoolean("use_unifont", useUnifont)
+                        .apply()
+                    open = false
+                }) { Text("保存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { open = false }) { Text("取消") }
+            }
         )
-
-        Text("文字颜色")
-        ColorSlider(
-            color = textColor,
-            onColorChanged = onTextColorChanged
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("阴影效果")
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(checked = shadowEnabled, onCheckedChange = onShadowEnabledChanged)
-        }
-
-        Text("字体大小: $fontSize")
-        Slider(
-            value = fontSize.toFloat(),
-            onValueChange = { onFontSizeChanged(it.toInt()) },
-            valueRange = 5f..300f,
-            steps = 295
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("彩虹效果")
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(checked = rainbowEnabled, onCheckedChange = onRainbowEnabledChanged)
-        }
-
-        Text("透明度: $alphaValue%")
-        Slider(
-            value = alphaValue.toFloat(),
-            onValueChange = { onAlphaValueChanged(it.toInt()) },
-            valueRange = 0f..100f,
-            steps = 100
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("使用Unifont字体")
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(checked = useUnifont, onCheckedChange = onUseUnifontChanged)
-        }
     }
 }
 
-/* -------------------- RGB 滑条 -------------------- */
+/* -------------------- 颜色滑条 -------------------- */
 @Composable
-fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
+private fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("R:")
+            Text("R")
             Slider(
                 value = Color.red(color).toFloat() / 255f,
                 onValueChange = {
-                    val newColor = Color.rgb(
-                        (it * 255).toInt(),
-                        Color.green(color),
-                        Color.blue(color)
+                    onColorChanged(
+                        Color.rgb((it * 255).toInt(), Color.green(color), Color.blue(color))
                     )
-                    onColorChanged(newColor)
                 },
                 valueRange = 0f..1f,
                 modifier = Modifier.weight(1f)
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("G:")
+            Text("G")
             Slider(
                 value = Color.green(color).toFloat() / 255f,
                 onValueChange = {
-                    val newColor = Color.rgb(
-                        Color.red(color),
-                        (it * 255).toInt(),
-                        Color.blue(color)
+                    onColorChanged(
+                        Color.rgb(Color.red(color), (it * 255).toInt(), Color.blue(color))
                     )
-                    onColorChanged(newColor)
                 },
                 valueRange = 0f..1f,
                 modifier = Modifier.weight(1f)
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("B:")
+            Text("B")
             Slider(
                 value = Color.blue(color).toFloat() / 255f,
                 onValueChange = {
-                    val newColor = Color.rgb(
-                        Color.red(color),
-                        Color.green(color),
-                        (it * 255).toInt()
+                    onColorChanged(
+                        Color.rgb(Color.red(color), Color.green(color), (it * 255).toInt())
                     )
-                    onColorChanged(newColor)
                 },
                 valueRange = 0f..1f,
                 modifier = Modifier.weight(1f)
             )
         }
     }
+}
+
+/* -------------------- 动态配色 Fallback -------------------- */
+@Composable
+private fun dynamicColorSchemeWithFallback(): ColorScheme =
+    dynamicDarkColorScheme(LocalContext.current)   // 或 dynamicLightColorScheme
+
+/* -------------------- Compose 弹窗 LifecycleOwner -------------------- */
+private class DialogComposeLifecycleOwner :
+    LifecycleOwner,
+    ViewModelStoreOwner,
+    SavedStateRegistryOwner {
+
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val store = ViewModelStore()
+    private val controller = SavedStateRegistryController.create(this)
+
+    fun attachToWindow() {
+        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+    }
+
+    fun detachFromWindow() {
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        store.clear()
+    }
+
+    override val lifecycle: Lifecycle = lifecycleRegistry
+    override val viewModelStore: ViewModelStore = store
+    override val savedStateRegistry: SavedStateRegistry = controller.savedStateRegistry
 }
