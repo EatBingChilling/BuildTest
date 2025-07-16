@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 
 class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
+    /* -------------------- 配置持久化 -------------------- */
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
@@ -51,7 +52,7 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
     override val lifecycle: Lifecycle = _lifecycleRegistry
 
     /* -------------------- 布局参数 -------------------- */
-    private val _layoutParams by lazy {
+    override val layoutParams: WindowManager.LayoutParams =
         super.layoutParams.apply {
             flags = flags or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -64,8 +65,6 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             x = 0
             y = 0
         }
-    }
-    override val layoutParams: WindowManager.LayoutParams get() = _layoutParams
 
     /* -------------------- 伴生对象 -------------------- */
     companion object {
@@ -102,7 +101,7 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
-        /* 配置弹窗实例缓存，防止重复弹出 */
+        /* 配置弹窗 */
         private var configWindow: ConfigDialogWindow? = null
         fun showConfigDialog() {
             if (!Settings.canDrawOverlays(appContext)) {
@@ -113,9 +112,7 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
                 appContext.startActivity(intent)
                 return
             }
-            if (configWindow == null) {
-                configWindow = ConfigDialogWindow()
-            }
+            if (configWindow == null) configWindow = ConfigDialogWindow()
             OverlayManager.showOverlayWindow(configWindow!!)
         }
     }
@@ -168,169 +165,196 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             )
         }
     }
+}
 
-    /* -------------------- 配置弹窗 -------------------- */
-    /**
-     * 独立悬浮窗：配置界面
-     */
-    private class ConfigDialogWindow : OverlayWindow() {
-        override val layoutParams: WindowManager.LayoutParams
-            get() = WindowManager.LayoutParams().apply {
-                type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                format = android.graphics.PixelFormat.TRANSLUCENT
-                flags = flags or
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                width = WindowManager.LayoutParams.WRAP_CONTENT
-                height = WindowManager.LayoutParams.WRAP_CONTENT
-                gravity = Gravity.CENTER
-            }
+/* =========================================================================
+ *  以下为跨类共享的 @Composable 函数与弹窗实现
+ * ========================================================================= */
 
-        @Composable
-        override fun Content() {
-            val prefs = appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
-
-            /* 本地 State，用于实时预览 */
-            var watermarkText by remember { mutableStateOf(prefs.getString("text", "") ?: "") }
-            var textColor by remember { mutableStateOf(prefs.getInt("color", Color.WHITE)) }
-            var shadowEnabled by remember { mutableStateOf(prefs.getBoolean("shadow", false)) }
-            var fontSize by remember {
-                mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
-            }
-            var rainbowEnabled by remember { mutableStateOf(prefs.getBoolean("rainbow", false)) }
-            var alphaValue by remember {
-                mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
-            }
-            var useUnifont by remember { mutableStateOf(prefs.getBoolean("use_unifont", true)) }
-
-            MaterialTheme {
-                AlertDialog(
-                    onDismissRequest = { OverlayManager.dismissOverlayWindow(this) },
-                    title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
-                    text = {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.verticalScroll(rememberScrollState())
-                        ) {
-                            OutlinedTextField(
-                                value = watermarkText,
-                                onValueChange = { watermarkText = it },
-                                label = { Text("水印文字") },
-                                singleLine = true
-                            )
-
-                            Text("文字颜色")
-                            ColorSlider(color = textColor, onColorChanged = { textColor = it })
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("阴影")
-                                Spacer(Modifier.weight(1f))
-                                Switch(
-                                    checked = shadowEnabled,
-                                    onCheckedChange = { shadowEnabled = it }
-                                )
-                            }
-
-                            Text("字体大小：$fontSize")
-                            Slider(
-                                value = fontSize.toFloat(),
-                                onValueChange = { fontSize = it.toInt() },
-                                valueRange = 5f..300f
-                            )
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("彩虹")
-                                Spacer(Modifier.weight(1f))
-                                Switch(
-                                    checked = rainbowEnabled,
-                                    onCheckedChange = { rainbowEnabled = it }
-                                )
-                            }
-
-                            Text("透明度：$alphaValue%")
-                            Slider(
-                                value = alphaValue.toFloat(),
-                                onValueChange = { alphaValue = it.toInt() },
-                                valueRange = 0f..100f
-                            )
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Unifont")
-                                Spacer(Modifier.weight(1f))
-                                Switch(
-                                    checked = useUnifont,
-                                    onCheckedChange = { useUnifont = it }
-                                )
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            prefs.edit()
-                                .putString("text", watermarkText)
-                                .putInt("color", textColor)
-                                .putBoolean("shadow", shadowEnabled)
-                                .putInt("size", fontSize)
-                                .putBoolean("rainbow", rainbowEnabled)
-                                .putInt("alpha", alphaValue)
-                                .putBoolean("use_unifont", useUnifont)
-                                .apply()
-                            OverlayManager.dismissOverlayWindow(this)
-                        }) { Text("保存") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { OverlayManager.dismissOverlayWindow(this) }) {
-                            Text("取消")
-                        }
-                    }
-                )
-            }
+/**
+ * 通用颜色滑条组件（顶层函数，任何地方都可调用）
+ */
+@Composable
+fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("R")
+            Slider(
+                value = Color.red(color) / 255f,
+                onValueChange = {
+                    onColorChanged(
+                        Color.rgb(
+                            (it * 255).toInt(),
+                            Color.green(color),
+                            Color.blue(color)
+                        )
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                valueRange = 0f..1f
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("G")
+            Slider(
+                value = Color.green(color) / 255f,
+                onValueChange = {
+                    onColorChanged(
+                        Color.rgb(
+                            Color.red(color),
+                            (it * 255).toInt(),
+                            Color.blue(color)
+                        )
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                valueRange = 0f..1f
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("B")
+            Slider(
+                value = Color.blue(color) / 255f,
+                onValueChange = {
+                    onColorChanged(
+                        Color.rgb(
+                            Color.red(color),
+                            Color.green(color),
+                            (it * 255).toInt()
+                        )
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                valueRange = 0f..1f
+            )
         }
     }
+}
 
-    /* -------------------- 颜色滑条 -------------------- */
+/**
+ * 配置弹窗悬浮窗（独立 OverlayWindow）
+ */
+private class ConfigDialogWindow : OverlayWindow() {
+    override val layoutParams: WindowManager.LayoutParams =
+        WindowManager.LayoutParams().apply {
+            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            format = android.graphics.PixelFormat.TRANSLUCENT
+            flags = flags or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            width = WindowManager.LayoutParams.WRAP_CONTENT
+            height = WindowManager.LayoutParams.WRAP_CONTENT
+            gravity = Gravity.CENTER
+        }
+
     @Composable
-    private fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("R")
-                Slider(
-                    value = Color.red(color).toFloat() / 255f,
-                    onValueChange = {
-                        onColorChanged(
-                            Color.rgb((it * 255).toInt(), Color.green(color), Color.blue(color))
+    override fun Content() {
+        val ctx = LocalContext.current
+        val prefs = ctx.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
+
+        var watermarkText by remember {
+            mutableStateOf(prefs.getString("text", "") ?: "")
+        }
+        var textColor by remember {
+            mutableStateOf(prefs.getInt("color", Color.WHITE))
+        }
+        var shadowEnabled by remember {
+            mutableStateOf(prefs.getBoolean("shadow", false))
+        }
+        var fontSize by remember {
+            mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
+        }
+        var rainbowEnabled by remember {
+            mutableStateOf(prefs.getBoolean("rainbow", false))
+        }
+        var alphaValue by remember {
+            mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
+        }
+        var useUnifont by remember {
+            mutableStateOf(prefs.getBoolean("use_unifont", true))
+        }
+
+        MaterialTheme {
+            AlertDialog(
+                onDismissRequest = { OverlayManager.dismissOverlayWindow(this) },
+                title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    ) {
+                        OutlinedTextField(
+                            value = watermarkText,
+                            onValueChange = { watermarkText = it },
+                            label = { Text("水印文字") },
+                            singleLine = true
                         )
-                    },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("G")
-                Slider(
-                    value = Color.green(color).toFloat() / 255f,
-                    onValueChange = {
-                        onColorChanged(
-                            Color.rgb(Color.red(color), (it * 255).toInt(), Color.blue(color))
+
+                        Text("文字颜色")
+                        ColorSlider(color = textColor, onColorChanged = { textColor = it })
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("阴影")
+                            Spacer(Modifier.weight(1f))
+                            Switch(
+                                checked = shadowEnabled,
+                                onCheckedChange = { shadowEnabled = it }
+                            )
+                        }
+
+                        Text("字体大小：$fontSize")
+                        Slider(
+                            value = fontSize.toFloat(),
+                            onValueChange = { fontSize = it.toInt() },
+                            valueRange = 5f..300f
                         )
-                    },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("B")
-                Slider(
-                    value = Color.blue(color).toFloat() / 255f,
-                    onValueChange = {
-                        onColorChanged(
-                            Color.rgb(Color.red(color), Color.green(color), (it * 255).toInt())
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("彩虹")
+                            Spacer(Modifier.weight(1f))
+                            Switch(
+                                checked = rainbowEnabled,
+                                onCheckedChange = { rainbowEnabled = it }
+                            )
+                        }
+
+                        Text("透明度：$alphaValue%")
+                        Slider(
+                            value = alphaValue.toFloat(),
+                            onValueChange = { alphaValue = it.toInt() },
+                            valueRange = 0f..100f
                         )
-                    },
-                    valueRange = 0f..1f,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Unifont")
+                            Spacer(Modifier.weight(1f))
+                            Switch(
+                                checked = useUnifont,
+                                onCheckedChange = { useUnifont = it }
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        prefs.edit()
+                            .putString("text", watermarkText)
+                            .putInt("color", textColor)
+                            .putBoolean("shadow", shadowEnabled)
+                            .putInt("size", fontSize)
+                            .putBoolean("rainbow", rainbowEnabled)
+                            .putInt("alpha", alphaValue)
+                            .putBoolean("use_unifont", useUnifont)
+                            .apply()
+                        OverlayManager.dismissOverlayWindow(this)
+                    }) { Text("保存") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { OverlayManager.dismissOverlayWindow(this) }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
     }
 }
