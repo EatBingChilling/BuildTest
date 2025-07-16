@@ -54,14 +54,14 @@ class ClientOverlay : OverlayWindow(), ViewModelStoreOwner, LifecycleOwner {
         get() = _layoutParams
 
     // 实现 ViewModelStoreOwner
-    private val _viewModelStore = ViewModelStore()
-    override val viewModelStore: ViewModelStore
-        get() = _viewModelStore
+    private val _vmStore = ViewModelStore()
+    override fun getViewModelStore(): ViewModelStore = _vmStore
 
     // 实现 LifecycleOwner
-    private val _lifecycleOwner = OverlayLifecycleOwner()
-    override val lifecycle: Lifecycle
-        get() = _lifecycleOwner.lifecycle
+    private val _lifecycleRegistry = LifecycleRegistry(this).apply {
+        currentState = Lifecycle.State.STARTED
+    }
+    override fun getLifecycle(): Lifecycle = _lifecycleRegistry
 
     companion object {
         private var overlayInstance: ClientOverlay? = null
@@ -195,7 +195,7 @@ class ClientOverlay : OverlayWindow(), ViewModelStoreOwner, LifecycleOwner {
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
         LaunchedEffect(rainbowEnabled) {
             if (rainbowEnabled) while (true) {
-                val hue = (System.currentTimeMillis() % 3600L) / 10f
+[object Object] val hue = (System.currentTimeMillis() % 3600L) / 10f
                 rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
                 delay(50L)
             }
@@ -261,7 +261,6 @@ fun ConfigDialogContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Color Picker (using Sliders)
         Text("文字颜色")
         ColorSlider(
             color = textColor,
@@ -274,7 +273,6 @@ fun ConfigDialogContent(
             Switch(checked = shadowEnabled, onCheckedChange = onShadowEnabledChanged)
         }
 
-        // Font Size Slider
         Text("字体大小: $fontSize")
         Slider(
             value = fontSize.toFloat(),
@@ -289,7 +287,6 @@ fun ConfigDialogContent(
             Switch(checked = rainbowEnabled, onCheckedChange = onRainbowEnabledChanged)
         }
 
-        // Alpha Slider
         Text("透明度: $alphaValue%")
         Slider(
             value = alphaValue.toFloat(),
@@ -357,20 +354,5 @@ fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
                 modifier = Modifier.weight(1f)
             )
         }
-    }
-}
-
-// 内部实现 OverlayLifecycleOwner
-class OverlayLifecycleOwner : LifecycleOwner {
-    private val registry = LifecycleRegistry(this)
-    override val lifecycle: Lifecycle
-        get() = registry
-
-    init {
-        registry.currentState = Lifecycle.State.STARTED
-    }
-
-    fun destroy() {
-        registry.currentState = Lifecycle.State.DESTROYED
     }
 }
