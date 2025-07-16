@@ -1,4 +1,4 @@
-// 文件：app/src/main/java/com/project/lumina/client/overlay/mods/ClientOverlay.kt
+// ClientOverlay.kt
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -11,21 +11,23 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.*
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
+import androidx.compose.ui.window.ComposeDialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
@@ -116,31 +118,25 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             return
         }
 
-        DialogComposeLifecycleOwner().use { owner ->
-            val dialog = ComposeView(appContext).apply {
-                setViewTreeLifecycleOwner(owner)
-                setViewTreeViewModelStoreOwner(owner)
-                setViewTreeSavedStateRegistryOwner(owner)
-                setContent {
-                    MaterialTheme(
-                        colorScheme = dynamicColorSchemeWithFallback()   // M3 动态配色
-                    ) {
-                        ConfigDialog()
-                    }
+        ComposeDialog(appContext).apply {
+            setContent {
+                MaterialTheme(
+                    colorScheme = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S)
+                        dynamicDarkColorScheme(LocalContext.current)
+                    else darkColorScheme()
+                ) {
+                    ConfigDialog(onDismiss = ::dismiss)
                 }
             }
-
-            val windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val params = WindowManager.LayoutParams().apply {
-                type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                width = WindowManager.LayoutParams.WRAP_CONTENT
-                height = WindowManager.LayoutParams.WRAP_CONTENT
-                gravity = Gravity.CENTER
-                flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            window?.apply {
+                setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+                setGravity(Gravity.CENTER)
+                attributes = attributes.apply {
+                    width = WindowManager.LayoutParams.WRAP_CONTENT
+                    height = WindowManager.LayoutParams.WRAP_CONTENT
+                }
             }
-            windowManager.addView(dialog, params)
+            show()
         }
     }
 
@@ -150,7 +146,7 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
         if (!isOverlayEnabled()) return
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
-        val unifontFamily = FontFamily(Font(resId = R.font.unifont))
+        val unifontFamily = FontFamily(Font(resId = R.font.packet))
         val defaultFamily = FontFamily.Default
 
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
@@ -195,12 +191,9 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
     /* -------------------- 配置内容 -------------------- */
     @Composable
-    private fun ConfigDialog() {
-        var open by remember { mutableStateOf(true) }
-        if (!open) return
-
+    private fun ConfigDialog(onDismiss: () -> Unit) {
         AlertDialog(
-            onDismissRequest = { open = false },
+            onDismissRequest = onDismiss,
             title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
             text = {
                 Column(
@@ -261,87 +254,58 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
                         .putInt("alpha", alphaValue)
                         .putBoolean("use_unifont", useUnifont)
                         .apply()
-                    open = false
+                    onDismiss()
                 }) { Text("保存") }
             },
             dismissButton = {
-                TextButton(onClick = { open = false }) { Text("取消") }
+                TextButton(onClick = onDismiss) { Text("取消") }
             }
         )
     }
-}
 
-/* -------------------- 颜色滑条 -------------------- */
-@Composable
-private fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("R")
-            Slider(
-                value = Color.red(color).toFloat() / 255f,
-                onValueChange = {
-                    onColorChanged(
-                        Color.rgb((it * 255).toInt(), Color.green(color), Color.blue(color))
-                    )
-                },
-                valueRange = 0f..1f,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("G")
-            Slider(
-                value = Color.green(color).toFloat() / 255f,
-                onValueChange = {
-                    onColorChanged(
-                        Color.rgb(Color.red(color), (it * 255).toInt(), Color.blue(color))
-                    )
-                },
-                valueRange = 0f..1f,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("B")
-            Slider(
-                value = Color.blue(color).toFloat() / 255f,
-                onValueChange = {
-                    onColorChanged(
-                        Color.rgb(Color.red(color), Color.green(color), (it * 255).toInt())
-                    )
-                },
-                valueRange = 0f..1f,
-                modifier = Modifier.weight(1f)
-            )
+    /* -------------------- 颜色滑条 -------------------- */
+    @Composable
+    private fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("R")
+                Slider(
+                    value = Color.red(color).toFloat() / 255f,
+                    onValueChange = {
+                        onColorChanged(
+                            Color.rgb((it * 255).toInt(), Color.green(color), Color.blue(color))
+                        )
+                    },
+                    valueRange = 0f..1f,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("G")
+                Slider(
+                    value = Color.green(color).toFloat() / 255f,
+                    onValueChange = {
+                        onColorChanged(
+                            Color.rgb(Color.red(color), (it * 255).toInt(), Color.blue(color))
+                        )
+                    },
+                    valueRange = 0f..1f,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("B")
+                Slider(
+                    value = Color.blue(color).toFloat() / 255f,
+                    onValueChange = {
+                        onColorChanged(
+                            Color.rgb(Color.red(color), Color.green(color), (it * 255).toInt())
+                        )
+                    },
+                    valueRange = 0f..1f,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
-}
-
-/* -------------------- 动态配色 Fallback -------------------- */
-@Composable
-private fun dynamicColorSchemeWithFallback(): ColorScheme =
-    dynamicDarkColorScheme(LocalContext.current)   // 或 dynamicLightColorScheme
-
-/* -------------------- Compose 弹窗 LifecycleOwner -------------------- */
-private class DialogComposeLifecycleOwner :
-    LifecycleOwner,
-    ViewModelStoreOwner,
-    SavedStateRegistryOwner {
-
-    private val lifecycleRegistry = LifecycleRegistry(this)
-    private val store = ViewModelStore()
-    private val controller = SavedStateRegistryController.create(this)
-
-    fun attachToWindow() {
-        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-    }
-
-    fun detachFromWindow() {
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        store.clear()
-    }
-
-    override val lifecycle: Lifecycle = lifecycleRegistry
-    override val viewModelStore: ViewModelStore = store
-    override val savedStateRegistry: SavedStateRegistry = controller.savedStateRegistry
 }
