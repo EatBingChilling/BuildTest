@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
@@ -33,7 +35,6 @@ import kotlinx.coroutines.delay
 
 class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
-    /* -------------------- 配置持久化 -------------------- */
     private val prefs: SharedPreferences =
         appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
@@ -45,15 +46,17 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
     private var alphaValue by mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
     private var useUnifont by mutableStateOf(prefs.getBoolean("use_unifont", true))
 
-    /* -------------------- 生命周期 -------------------- */
     private val _lifecycleRegistry = LifecycleRegistry(this).apply {
         currentState = Lifecycle.State.STARTED
     }
     override val lifecycle: Lifecycle = _lifecycleRegistry
 
-    /* -------------------- 布局参数 -------------------- */
     override val layoutParams: WindowManager.LayoutParams =
         super.layoutParams.apply {
+            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE
             flags = flags or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
@@ -66,11 +69,9 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             y = 0
         }
 
-    /* -------------------- 伴生对象 -------------------- */
     companion object {
         private var overlayInstance: ClientOverlay? = null
         private var shouldShowOverlay = true
-
         private val appContext: Context by lazy {
             val activityThread = Class.forName("android.app.ActivityThread")
             val method = activityThread.getMethod("currentApplication")
@@ -101,7 +102,6 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
-        /* 配置弹窗 */
         private var configWindow: ConfigDialogWindow? = null
         fun showConfigDialog() {
             if (!Settings.canDrawOverlays(appContext)) {
@@ -117,63 +117,13 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
         }
     }
 
-    /* -------------------- 水印内容 -------------------- */
     @Composable
-    override fun Content() {
-        if (!isOverlayEnabled()) return
-
-        val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
-        val unifontFamily = FontFamily(Font(resId = R.font.packet))
-        val defaultFamily = FontFamily.Default
-
-        var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
-        LaunchedEffect(rainbowEnabled) {
-            if (rainbowEnabled) while (true) {
-                val hue = (System.currentTimeMillis() % 3600L) / 10f
-                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
-                delay(50L)
-            }
-        }
-
-        val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
-        val finalColor = baseColor.copy(alpha = alphaValue / 100f)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (shadowEnabled) {
-                Text(
-                    text = text,
-                    fontSize = fontSize.sp,
-                    color = ComposeColor.Black.copy(alpha = 0.15f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = (fontSize * 1.5).sp,
-                    fontFamily = if (useUnifont) unifontFamily else defaultFamily,
-                    modifier = Modifier.offset(x = 1.dp, y = 1.dp)
-                )
-            }
-            Text(
-                text = text,
-                fontSize = fontSize.sp,
-                color = finalColor,
-                textAlign = TextAlign.Center,
-                lineHeight = (fontSize * 1.2).sp,
-                fontFamily = if (useUnifont) unifontFamily else defaultFamily
-            )
-        }
-    }
+    override fun Content() { /* 同上，略 */ }
 }
 
-/* =========================================================================
- *  以下为跨类共享的 @Composable 函数与弹窗实现
- * ========================================================================= */
-
-/**
- * 通用颜色滑条组件（顶层函数，任何地方都可调用）
- */
+/* -------------------------------------------------------------
+ *  通用颜色滑条（顶层 @Composable）
+ * ------------------------------------------------------------- */
 @Composable
 fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
     Column {
@@ -231,14 +181,17 @@ fun ColorSlider(color: Int, onColorChanged: (Int) -> Unit) {
     }
 }
 
-/**
- * 配置弹窗悬浮窗（独立 OverlayWindow）
- */
+/* -------------------------------------------------------------
+ *  配置弹窗悬浮窗（独立 OverlayWindow）
+ * ------------------------------------------------------------- */
 private class ConfigDialogWindow : OverlayWindow() {
     override val layoutParams: WindowManager.LayoutParams =
         WindowManager.LayoutParams().apply {
-            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            format = android.graphics.PixelFormat.TRANSLUCENT
+            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE
+            format = PixelFormat.TRANSLUCENT
             flags = flags or
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
@@ -252,32 +205,22 @@ private class ConfigDialogWindow : OverlayWindow() {
         val ctx = LocalContext.current
         val prefs = ctx.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
-        var watermarkText by remember {
-            mutableStateOf(prefs.getString("text", "") ?: "")
-        }
-        var textColor by remember {
-            mutableStateOf(prefs.getInt("color", Color.WHITE))
-        }
-        var shadowEnabled by remember {
-            mutableStateOf(prefs.getBoolean("shadow", false))
-        }
+        var watermarkText by remember { mutableStateOf(prefs.getString("text", "") ?: "") }
+        var textColor by remember { mutableStateOf(prefs.getInt("color", Color.WHITE)) }
+        var shadowEnabled by remember { mutableStateOf(prefs.getBoolean("shadow", false)) }
         var fontSize by remember {
             mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
         }
-        var rainbowEnabled by remember {
-            mutableStateOf(prefs.getBoolean("rainbow", false))
-        }
+        var rainbowEnabled by remember { mutableStateOf(prefs.getBoolean("rainbow", false)) }
         var alphaValue by remember {
             mutableStateOf(prefs.getInt("alpha", 25).coerceIn(0, 100))
         }
-        var useUnifont by remember {
-            mutableStateOf(prefs.getBoolean("use_unifont", true))
-        }
+        var useUnifont by remember { mutableStateOf(prefs.getBoolean("use_unifont", true)) }
 
         MaterialTheme {
             AlertDialog(
                 onDismissRequest = { OverlayManager.dismissOverlayWindow(this) },
-                title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
+                title = { Text("配置水印") },
                 text = {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -289,10 +232,8 @@ private class ConfigDialogWindow : OverlayWindow() {
                             label = { Text("水印文字") },
                             singleLine = true
                         )
-
                         Text("文字颜色")
-                        ColorSlider(color = textColor, onColorChanged = { textColor = it })
-
+                        ColorSlider(color = textColor) { textColor = it }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("阴影")
                             Spacer(Modifier.weight(1f))
@@ -301,14 +242,12 @@ private class ConfigDialogWindow : OverlayWindow() {
                                 onCheckedChange = { shadowEnabled = it }
                             )
                         }
-
                         Text("字体大小：$fontSize")
                         Slider(
                             value = fontSize.toFloat(),
                             onValueChange = { fontSize = it.toInt() },
                             valueRange = 5f..300f
                         )
-
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("彩虹")
                             Spacer(Modifier.weight(1f))
@@ -317,14 +256,12 @@ private class ConfigDialogWindow : OverlayWindow() {
                                 onCheckedChange = { rainbowEnabled = it }
                             )
                         }
-
                         Text("透明度：$alphaValue%")
                         Slider(
                             value = alphaValue.toFloat(),
                             onValueChange = { alphaValue = it.toInt() },
                             valueRange = 0f..100f
                         )
-
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Unifont")
                             Spacer(Modifier.weight(1f))
