@@ -183,7 +183,7 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
-val unifontFamily = FontFamily(Font(R.font.unifont))
+val unifontFamily = FontFamily(Font(R.font.unifont_family))
 
 
         val defaultFamily = FontFamily.Default
