@@ -17,13 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.font.*
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import com.project.lumina.client.R              // 显式导入 R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
@@ -183,9 +185,8 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
-val unifontFamily = FontFamily(Font(R.font.packet))
-
-
+        // 显式使用命名参数，避免 R.font 解析问题
+        val unifontFamily = FontFamily(Font(resId = R.font.packet))
         val defaultFamily = FontFamily.Default
 
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
