@@ -184,7 +184,8 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
 
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
-        val unifontFamily = FontFamily(Font(com.project.lumina.R.font.unifont))
+        val unifontFamily = FontFamily(Font(R.font.unifont))
+
         val defaultFamily = FontFamily.Default
 
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
