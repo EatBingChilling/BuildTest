@@ -116,6 +116,8 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             return
         }
 
+        // 这部分必须放在一个 Composable 函数内部
+        val context = LocalContext.current
         AlertDialog(
             onDismissRequest = { /* Handle dismiss */ },
             title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
