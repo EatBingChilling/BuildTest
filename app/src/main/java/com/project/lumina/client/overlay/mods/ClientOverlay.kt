@@ -1,4 +1,3 @@
-// ClientOverlay.kt
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -24,7 +23,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.ComposeDialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -118,82 +116,8 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
             return
         }
 
-        ComposeDialog(appContext).apply {
-            setContent {
-                MaterialTheme(
-                    colorScheme = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S)
-                        dynamicDarkColorScheme(LocalContext.current)
-                    else darkColorScheme()
-                ) {
-                    ConfigDialog(onDismiss = ::dismiss)
-                }
-            }
-            window?.apply {
-                setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-                setGravity(Gravity.CENTER)
-                attributes = attributes.apply {
-                    width = WindowManager.LayoutParams.WRAP_CONTENT
-                    height = WindowManager.LayoutParams.WRAP_CONTENT
-                }
-            }
-            show()
-        }
-    }
-
-    /* -------------------- 水印内容 -------------------- */
-    @Composable
-    override fun Content() {
-        if (!isOverlayEnabled()) return
-
-        val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
-        val unifontFamily = FontFamily(Font(resId = R.font.packet))
-        val defaultFamily = FontFamily.Default
-
-        var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
-        LaunchedEffect(rainbowEnabled) {
-            if (rainbowEnabled) while (true) {
-                val hue = (System.currentTimeMillis() % 3600L) / 10f
-                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
-                delay(50L)
-            }
-        }
-
-        val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
-        val finalColor = baseColor.copy(alpha = alphaValue / 100f)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (shadowEnabled) {
-                Text(
-                    text = text,
-                    fontSize = fontSize.sp,
-                    color = ComposeColor.Black.copy(alpha = 0.15f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = (fontSize * 1.5).sp,
-                    fontFamily = if (useUnifont) unifontFamily else defaultFamily,
-                    modifier = Modifier.offset(x = 1.dp, y = 1.dp)
-                )
-            }
-            Text(
-                text = text,
-                fontSize = fontSize.sp,
-                color = finalColor,
-                textAlign = TextAlign.Center,
-                lineHeight = (fontSize * 1.2).sp,
-                fontFamily = if (useUnifont) unifontFamily else defaultFamily
-            )
-        }
-    }
-
-    /* -------------------- 配置内容 -------------------- */
-    @Composable
-    private fun ConfigDialog(onDismiss: () -> Unit) {
         AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { /* Handle dismiss */ },
             title = { Text("配置水印", style = MaterialTheme.typography.headlineSmall) },
             text = {
                 Column(
@@ -254,13 +178,61 @@ class ClientOverlay : OverlayWindow(), LifecycleOwner {
                         .putInt("alpha", alphaValue)
                         .putBoolean("use_unifont", useUnifont)
                         .apply()
-                    onDismiss()
                 }) { Text("保存") }
             },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text("取消") }
+                TextButton(onClick = { /* Handle cancel */ }) { Text("取消") }
             }
         )
+    }
+
+    /* -------------------- 水印内容 -------------------- */
+    @Composable
+    override fun Content() {
+        if (!isOverlayEnabled()) return
+
+        val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
+        val unifontFamily = FontFamily(Font(resId = R.font.packet))
+        val defaultFamily = FontFamily.Default
+
+        var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
+        LaunchedEffect(rainbowEnabled) {
+            if (rainbowEnabled) while (true) {
+                val hue = (System.currentTimeMillis() % 3600L) / 10f
+                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
+                delay(50L)
+            }
+        }
+
+        val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
+        val finalColor = baseColor.copy(alpha = alphaValue / 100f)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (shadowEnabled) {
+                Text(
+                    text = text,
+                    fontSize = fontSize.sp,
+                    color = ComposeColor.Black.copy(alpha = 0.15f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = (fontSize * 1.5).sp,
+                    fontFamily = if (useUnifont) unifontFamily else defaultFamily,
+                    modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+                )
+            }
+            Text(
+                text = text,
+                fontSize = fontSize.sp,
+                color = finalColor,
+                textAlign = TextAlign.Center,
+                lineHeight = (fontSize * 1.2).sp,
+                fontFamily = if (useUnifont) unifontFamily else defaultFamily
+            )
+        }
     }
 
     /* -------------------- 颜色滑条 -------------------- */
