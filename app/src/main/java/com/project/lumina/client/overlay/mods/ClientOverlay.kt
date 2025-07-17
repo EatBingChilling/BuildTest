@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.project.lumina.client.R
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
