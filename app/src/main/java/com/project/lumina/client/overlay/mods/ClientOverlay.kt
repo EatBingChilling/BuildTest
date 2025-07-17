@@ -1,4 +1,4 @@
-// 飞起来
+// ClientOverlay.kt  老哥修完版 直接糊脸上
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -7,6 +7,8 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
 import android.view.WindowManager
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,16 +22,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
-
-// 防止lifecycle 死掉 直接扔个空LifecycleOwner 简单粗暴
-private object NoLifecycle : androidx.lifecycle.LifecycleOwner {
-    private val reg = androidx.lifecycle.LifecycleRegistry(this)
-    override val lifecycle: androidx.lifecycle.Lifecycle get() = reg
-}
 
 class ClientOverlay : OverlayWindow() {
 
@@ -117,16 +114,22 @@ class ClientOverlay : OverlayWindow() {
 
         val localColor = Color.rgb(localRed, localGreen, localBlue)
 
-        Dialog(onDismissRequest = onDismiss) {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             Surface(
                 shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .wrapContentHeight()
             ) {
                 Column(
                     modifier = Modifier
                         .padding(24.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text("配置水印", style = MaterialTheme.typography.headlineSmall)
 
@@ -139,9 +142,10 @@ class ClientOverlay : OverlayWindow() {
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("颜色预览", modifier = Modifier.weight(1f))
+                        Text("颜色预览")
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
@@ -149,7 +153,6 @@ class ClientOverlay : OverlayWindow() {
                         )
                     }
 
-                    // R G B 三兄弟
                     listOf("红" to localRed, "绿" to localGreen, "蓝" to localBlue).forEachIndexed { idx, (label, value) ->
                         Column {
                             Text("$label: $value")
@@ -168,7 +171,6 @@ class ClientOverlay : OverlayWindow() {
                         }
                     }
 
-                    // 字体大小
                     Column {
                         Text("字体大小: ${localSize + 5}")
                         Slider(
@@ -179,7 +181,6 @@ class ClientOverlay : OverlayWindow() {
                         )
                     }
 
-                    // 透明度
                     Column {
                         Text("透明度: $localAlpha%")
                         Slider(
@@ -208,7 +209,6 @@ class ClientOverlay : OverlayWindow() {
                         Switch(checked = localRain, onCheckedChange = { localRain = it })
                     }
 
-                    // 按钮排排坐
                     Row(
                         horizontalArrangement = Arrangement.End,
                         modifier = Modifier.fillMaxWidth()
@@ -241,13 +241,15 @@ class ClientOverlay : OverlayWindow() {
         }
     }
 
-    // 原来那个showConfigDialog直接换成Compose弹窗
+    // 用原生WindowManager弹Compose弹窗 再也不见ViewManager
     fun showConfigDialog() {
-        val dialogView = androidx.compose.ui.platform.ComposeView(appContext).apply {
+        val composeView = androidx.compose.ui.platform.ComposeView(appContext).apply {
             setContent {
-                // 套个Material3主题 不然丑哭
                 MaterialTheme {
-                    ConfigDialog { (parent as? ViewManager)?.removeView(this) }
+                    ConfigDialog {
+                        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                        wm.removeView(this)
+                    }
                 }
             }
         }
@@ -263,7 +265,7 @@ class ClientOverlay : OverlayWindow() {
         }
 
         val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        wm.addView(dialogView, winParams)
+        wm.addView(composeView, winParams)
     }
 
     @Composable
