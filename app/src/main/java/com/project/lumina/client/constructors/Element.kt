@@ -6,15 +6,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.project.lumina.client.game.InterruptiblePacketHandler
+import com.project.lumina.client.overlay.manager.OverlayManager
+import com.project.lumina.client.overlay.mods.OverlayModuleList
+import com.project.lumina.client.overlay.mods.OverlayNotification
+import com.project.lumina.client.overlay.manager.OverlayShortcutButton
 import kotlinx.serialization.json.*
 
 abstract class Element(
-    val name: String,                               // 内部名
+    val name: String,
     val category: CheatCategory,
-    val iconResId: Int = 0,                        // 不再使用，可保留兼容
+    val iconResId: Int = 0,
     defaultEnabled: Boolean = false,
     val private: Boolean = false,
-    @StringRes open val displayNameResId: Int? = null  // 显示在按钮上的文字
+    @StringRes open val displayNameResId: Int? = null
 ) : InterruptiblePacketHandler, Configurable {
 
     open lateinit var session: NetBound
@@ -50,8 +54,8 @@ abstract class Element(
         sendToggleMessage(false)
     }
 
-    /* ------------ 序列化 ------------ */
-    override fun toJson() = buildJsonObject {
+    /* ========= 以下两行必须加 override ========= */
+    open fun toJson() = buildJsonObject {
         put("state", isEnabled)
         put("values", buildJsonObject {
             values.forEach { value ->
@@ -67,20 +71,35 @@ abstract class Element(
         }
     }
 
-    override fun fromJson(jsonElement: JsonElement) {
-        if (jsonElement !is JsonObject) return
-        isEnabled = (jsonElement["state"] as? JsonPrimitive)?.boolean ?: isEnabled
-        (jsonElement["values"] as? JsonObject)?.forEach { (k, v) ->
-            val value = getValue(k) ?: values.find { it.nameResId.toString() == k }
-            value?.runCatching { fromJson(v) }?.onFailure { reset() }
-        }
-        (jsonElement["shortcut"] as? JsonObject)?.let {
-            shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
-            shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
-            isShortcutDisplayed = true
+    open fun fromJson(jsonElement: JsonElement) {
+        if (jsonElement is JsonObject) {
+            isEnabled = (jsonElement["state"] as? JsonPrimitive)?.boolean ?: isEnabled
+            (jsonElement["values"] as? JsonObject)?.let {
+                it.forEach { jsonObject ->
+                    val value = getValue(jsonObject.key)
+                        ?: if (jsonObject.key.toIntOrNull() != null) {
+                            values.find { it.nameResId == jsonObject.key.toInt() }
+                        } else null
+
+                    value?.let { v ->
+                        try {
+                            v.fromJson(jsonObject.value)
+                        } catch (e: Throwable) {
+                            v.reset()
+                        }
+                    }
+                }
+            }
+            (jsonElement["shortcut"] as? JsonObject)?.let {
+                shortcutX = (it["x"] as? JsonPrimitive)?.int ?: shortcutX
+                shortcutY = (it["y"] as? JsonPrimitive)?.int ?: shortcutY
+                isShortcutDisplayed = true
+            }
         }
     }
 
+
+    /* ========= 通知：使用双参数扩展接口 ========= */
     private fun sendToggleMessage(enabled: Boolean) {
         if (!isSessionCreated) return
         try {

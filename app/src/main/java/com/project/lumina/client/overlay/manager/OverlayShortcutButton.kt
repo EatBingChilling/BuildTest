@@ -8,13 +8,14 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
@@ -28,17 +29,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.project.lumina.client.constructors.Element
 import kotlin.math.cos
 import kotlin.math.sin
+
 
 class OverlayShortcutButton(
     private val element: Element
@@ -57,14 +60,17 @@ class OverlayShortcutButton(
     override val layoutParams: WindowManager.LayoutParams
         get() = _layoutParams
 
+
     @Composable
     override fun Content() {
         val context = LocalContext.current
         val width = context.resources.displayMetrics.widthPixels
         val height = context.resources.displayMetrics.heightPixels
         val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val buttonSizePx = with(LocalDensity.current) { 56.dp.roundToPx() }
 
-        val baseColors = listOf(Color.White, Color(0xFFE0E0E0), Color.White)
+
+        val baseColors = listOf(Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFFFFFFFF))
         val shuffledColors = remember { baseColors.shuffled() }
 
         val infiniteTransition = rememberInfiniteTransition()
@@ -87,55 +93,60 @@ class OverlayShortcutButton(
             end = Offset(gradientOffset + x, gradientOffset + y)
         )
 
+        val density = LocalDensity.current
+
         LaunchedEffect(isLandscape) {
-            _layoutParams.x = _layoutParams.x.coerceIn(0, width)
-            _layoutParams.y = _layoutParams.y.coerceIn(0, height)
+            val buttonSizePx = with(density) { 56.dp.roundToPx() }
+            _layoutParams.x = _layoutParams.x.coerceIn(0, width - buttonSizePx)
+            _layoutParams.y = _layoutParams.y.coerceIn(0, height - buttonSizePx)
             windowManager.updateViewLayout(composeView, _layoutParams)
             updateShortcut()
         }
 
+
         Box(
             modifier = Modifier
                 .padding(5.dp)
-                .wrapContentSize()
+                .size(56.dp)
                 .then(
-                    if (element.isEnabled) Modifier.border(
-                        1.dp,
-                        gradientBrush,
-                        RoundedCornerShape(32.dp)
-                    )
+                    if (element.isEnabled) Modifier.border(1.dp, gradientBrush, CircleShape)
                     else Modifier
                 )
         ) {
             ElevatedCard(
-                onClick = { element.isEnabled = !element.isEnabled },
-                shape = RoundedCornerShape(32.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = Color.Black.copy(alpha = 0.8f)
-                ),
+                onClick = {element.isEnabled = !element.isEnabled },
+                shape = CircleShape,
+                colors = CardDefaults.elevatedCardColors(containerColor = Color.Black.copy(alpha = 0.8f)),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
                 modifier = Modifier
-                    .wrapContentSize()
-                    .heightIn(min = 48.dp) // 最小高度
+                    .fillMaxSize()
                     .pointerInput(Unit) {
                         detectDragGestures { _, dragAmount ->
-                            _layoutParams.x =
-                                (_layoutParams.x + dragAmount.x.toInt()).coerceIn(0, width)
-                            _layoutParams.y =
-                                (_layoutParams.y + dragAmount.y.toInt()).coerceIn(0, height)
+                            _layoutParams.x = (_layoutParams.x + dragAmount.x.toInt()).coerceIn(0, width - buttonSizePx)
+                            _layoutParams.y = (_layoutParams.y + dragAmount.y.toInt()).coerceIn(0, height - buttonSizePx)
                             windowManager.updateViewLayout(composeView, _layoutParams)
                             updateShortcut()
                         }
                     }
             ) {
-                Text(
-                    text = stringResource(id = element.nameResId),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 14.sp,
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    if (element.iconResId != 0) {
+                        Image(
+                            painter = painterResource(id = element.iconResId),
+                            contentDescription = element.name,
+                            colorFilter = ColorFilter.tint(Color.White),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Text(
+                            text = element.name.split(" ").joinToString("\n"),
+                            style = MaterialTheme.typography.bodySmall.copy(brush = gradientBrush),
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
             }
         }
     }

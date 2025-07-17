@@ -1,185 +1,253 @@
 package com.project.lumina.client.overlay.mods
 
 import android.app.AlertDialog
+import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import android.view.*
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.WindowManager
 import android.widget.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
-import kotlinx.coroutines.*
+import kotlinx.coroutines.delay
 
 class ClientOverlay : OverlayWindow() {
 
-    /* ---------------- 水印参数 ---------------- */
     private val prefs: SharedPreferences =
-        OverlayManager.currentContext!!.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
+        appContext.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
-    private var watermarkText  = prefs.getString("text", "") ?: ""
-    private var textColor      = prefs.getInt("color", Color.WHITE)
-    private var shadowEnabled  = prefs.getBoolean("shadow", false)
-    private var fontSize       = prefs.getInt("size", 28).coerceIn(5, 300)
-    private var rainbowEnabled = prefs.getBoolean("rainbow", false)
-    private var alphaValue     = prefs.getInt("alpha", 25).coerceIn(0, 100)
+    private var watermarkText by mutableStateOf(prefs.getString("text", "") ?: "")
+    private var textColor by mutableStateOf(prefs.getInt("color", Color.WHITE))
+    private var shadowEnabled by mutableStateOf(prefs.getBoolean("shadow", false))
+    // 字体范围扩大到5-300sp
+    private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300)) 
+    private var rainbowEnabled by mutableStateOf(prefs.getBoolean("rainbow", false))
 
-    /* ---------------- 水印 TextView ---------------- */
-    private val textView: TextView by lazy {
-        TextView(OverlayManager.currentContext).apply {
-            text = watermarkText
-            setTextColor(textColor)
-            textSize = fontSize.toFloat()
-            alpha = alphaValue / 100f
+    private val _layoutParams by lazy {
+        super.layoutParams.apply {
+            flags = flags or
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            width = WindowManager.LayoutParams.MATCH_PARENT
+            height = WindowManager.LayoutParams.MATCH_PARENT
             gravity = Gravity.CENTER
-            setShadowLayer(if (shadowEnabled) 4f else 0f, 2f, 2f, Color.BLACK)
+            x = 0
+            y = 0
         }
     }
 
-    /* ---------------- 彩虹循环 ---------------- */
-    init {
-        composeView.addView(textView)
+    override val layoutParams: WindowManager.LayoutParams
+        get() = _layoutParams
 
-        if (rainbowEnabled) {
-            CoroutineScope(Dispatchers.Main).launch {
-                while (true) {
-                    textView.setTextColor(hsvRainbow())
-                    delay(200)
-                }
-            }
-        }
-    }
-
-    private fun hsvRainbow(): Int {
-        val hue = (System.currentTimeMillis() / 40) % 360
-        return Color.HSVToColor(floatArrayOf(hue.toFloat(), 1f, 1f))
-    }
-
-    /* ---------------- Compose 占位 ---------------- */
-    @androidx.compose.runtime.Composable
-    override fun Content() {
-        // 空实现，父类要求
-    }
-
-    /* ---------------- 静态接口 ---------------- */
     companion object {
         private var overlayInstance: ClientOverlay? = null
+        private var shouldShowOverlay = true
+
+        private val appContext: Context by lazy {
+            val appClass = Class.forName("android.app.ActivityThread")
+            val method = appClass.getMethod("currentApplication")
+            method.invoke(null) as Application
+        }
 
         fun showOverlay() {
-            if (!Settings.canDrawOverlays(OverlayManager.currentContext)) return
-            if (overlayInstance == null) overlayInstance = ClientOverlay()
-            OverlayManager.showOverlayWindow(overlayInstance!!)
+            if (shouldShowOverlay) {
+                overlayInstance = ClientOverlay()
+                try {
+                    OverlayManager.showOverlayWindow(overlayInstance!!)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
 
         fun dismissOverlay() {
-            overlayInstance?.let { OverlayManager.dismissOverlayWindow(it) }
-            overlayInstance = null
+            try {
+                overlayInstance?.let { OverlayManager.dismissOverlayWindow(it) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
         fun setOverlayEnabled(enabled: Boolean) {
-            if (!enabled) dismissOverlay()
+            shouldShowOverlay = enabled
+            if (!enabled) {
+                dismissOverlay()
+            }
         }
 
-        fun isOverlayEnabled(): Boolean = overlayInstance != null
-
-        /* ------------ 配置弹窗 ------------ */
-        private var configDialog: AlertDialog? = null
+        fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
         fun showConfigDialog() {
-            val ctx = OverlayManager.currentContext ?: return
-            if (!Settings.canDrawOverlays(ctx)) {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${ctx.packageName}")
-                ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-                ctx.startActivity(intent)
-                return
-            }
-
-            if (configDialog?.isShowing == true) return
-
-            val prefs = ctx.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
-
-            var watermarkText  = prefs.getString("text", "") ?: ""
-            var textColor      = prefs.getInt("color", Color.WHITE)
-            var shadowEnabled  = prefs.getBoolean("shadow", false)
-            var fontSize       = prefs.getInt("size", 28).coerceIn(5, 300)
-            var rainbowEnabled = prefs.getBoolean("rainbow", false)
-            var alphaValue     = prefs.getInt("alpha", 25).coerceIn(0, 100)
-
-            val scroll = ScrollView(ctx)
-            val col = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(48, 48, 48, 48)
-            }
-
-            val etText = EditText(ctx).apply { setText(watermarkText); hint = "水印文字" }
-            col.addView(etText)
-
-            fun addSeek(label: String, init: Int, max: Int, set: (Int) -> Unit) {
-                col.addView(TextView(ctx).apply { text = label })
-                col.addView(SeekBar(ctx).apply {
-                    this.max = max
-                    progress = init
-                    setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                        override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) = set(p)
-                        override fun onStartTrackingTouch(sb: SeekBar?) {}
-                        override fun onStopTrackingTouch(sb: SeekBar?) {}
-                    })
-                })
-            }
-
-            addSeek("R", Color.red(textColor), 255) { textColor = Color.rgb(it, Color.green(textColor), Color.blue(textColor)) }
-            addSeek("G", Color.green(textColor), 255) { textColor = Color.rgb(Color.red(textColor), it, Color.blue(textColor)) }
-            addSeek("B", Color.blue(textColor), 255) { textColor = Color.rgb(Color.red(textColor), Color.green(textColor), it) }
-
-            fun addSwitch(label: String, init: Boolean, set: (Boolean) -> Unit) {
-                val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-                row.addView(TextView(ctx).apply { text = label })
-                row.addView(Space(ctx).apply { layoutParams = LinearLayout.LayoutParams(0, 0, 1f) })
-                row.addView(Switch(ctx).apply { isChecked = init; setOnCheckedChangeListener { _, b -> set(b) } })
-                col.addView(row)
-            }
-
-            addSwitch("阴影", shadowEnabled) { shadowEnabled = it }
-            addSwitch("彩虹", rainbowEnabled) { rainbowEnabled = it }
-
-            addSeek("字体大小", fontSize, 300) { fontSize = it.coerceIn(5, 300) }
-            addSeek("透明度 %", alphaValue, 100) { alphaValue = it.coerceIn(0, 100) }
-
-            scroll.addView(col)
-
-            configDialog = AlertDialog.Builder(ctx)
-                .setTitle("配置水印")
-                .setView(scroll)
-                .setPositiveButton("保存") { _, _ ->
-                    prefs.edit()
-                        .putString("text", etText.text.toString())
-                        .putInt("color", textColor)
-                        .putBoolean("shadow", shadowEnabled)
-                        .putInt("size", fontSize)
-                        .putBoolean("rainbow", rainbowEnabled)
-                        .putInt("alpha", alphaValue)
-                        .apply()
-                    configDialog = null
-                    dismissOverlay()
-                    showOverlay()
-                }
-                .setNegativeButton("取消") { _, _ -> configDialog = null }
-                .setOnDismissListener { configDialog = null }
-                .create()
-                .apply {
-                    window?.setType(
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                        else
-                            WindowManager.LayoutParams.TYPE_PHONE
-                    )
-                    show()
-                }
+            overlayInstance?.showConfigDialog()
         }
     }
+
+    fun showConfigDialog() {
+        val dialogView = LayoutInflater.from(appContext).inflate(R.layout.overlay_config_dialog, null)
+        val editText = dialogView.findViewById<EditText>(R.id.editText)
+        val seekRed = dialogView.findViewById<SeekBar>(R.id.seekRed)
+        val seekGreen = dialogView.findViewById<SeekBar>(R.id.seekGreen)
+        val seekBlue = dialogView.findViewById<SeekBar>(R.id.seekBlue)
+        val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
+        // 字体大小范围扩大到5-300sp
+        val seekSize = dialogView.findViewById<SeekBar>(R.id.seekSize).apply {
+            max = 295 // 300 - 5 = 295
+        }
+        val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
+        val colorPreview = dialogView.findViewById<TextView>(R.id.colorPreview)
+
+        editText.setText(watermarkText)
+        seekRed.progress = Color.red(textColor)
+        seekGreen.progress = Color.green(textColor)
+        seekBlue.progress = Color.blue(textColor)
+        switchShadow.isChecked = shadowEnabled
+        // 映射字体大小到控件范围
+        seekSize.progress = fontSize - 5
+        switchRainbow.isChecked = rainbowEnabled
+
+        fun updateColorPreview() {
+            val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
+            colorPreview.setBackgroundColor(color)
+        }
+
+        updateColorPreview()
+
+        seekRed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                updateColorPreview()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        seekGreen.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                updateColorPreview()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        seekBlue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                updateColorPreview()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        val dialog = AlertDialog.Builder(appContext)
+            .setTitle("配置水印")
+            .setView(dialogView)
+            .setPositiveButton("确定") { _, _ ->
+                watermarkText = editText.text.toString()
+                val red = seekRed.progress
+                val green = seekGreen.progress
+                val blue = seekBlue.progress
+                textColor = Color.rgb(red, green, blue)
+                shadowEnabled = switchShadow.isChecked
+                // 反映射字体大小到实际值 (5-300sp)
+                fontSize = seekSize.progress + 5
+                rainbowEnabled = switchRainbow.isChecked
+
+                prefs.edit()
+                    .putString("text", watermarkText)
+                    .putInt("color", textColor)
+                    .putBoolean("shadow", shadowEnabled)
+                    .putInt("size", fontSize)
+                    .putBoolean("rainbow", rainbowEnabled)
+                    .apply()
+            }
+            .setNegativeButton("取消", null)
+            .create()
+
+        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+        dialog.show()
+    }
+
+    @Composable
+override fun Content() {
+    if (!isOverlayEnabled()) return
+
+    // 修复字体问题
+    val unifontFamily = FontFamily(Font(R.font.unifont))
+
+    val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
+
+    var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
+
+    LaunchedEffect(rainbowEnabled) {
+        if (rainbowEnabled) {
+            while (true) {
+                val hue = (System.currentTimeMillis() % 3600L) / 10f
+                rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
+                delay(50L)
+            }
+        }
+    }
+
+    // 统一透明度设置（25%透明度）
+    val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
+    val finalColor = baseColor.copy(alpha = 0.25f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (shadowEnabled) {
+            // 使用轻量阴影效果（避免偏移导致居中问题）
+            Text(
+                text = text,
+                fontSize = fontSize.sp,
+                // 取消粗体
+                // fontWeight = FontWeight.Bold,
+                fontFamily = unifontFamily,
+                color = ComposeColor.Black.copy(alpha = 0.15f),
+                textAlign = TextAlign.Center,
+                lineHeight = (fontSize * 1.5).sp, // 设置1.5倍行距
+                // 增加50%字间距
+                letterSpacing = (fontSize * 0.1).sp,
+                modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+            )
+        }
+
+        Text(
+            text = text,
+            fontSize = fontSize.sp,
+            // 取消粗体
+            // fontWeight = FontWeight.Bold,
+            fontFamily = unifontFamily,
+            color = finalColor,
+            textAlign = TextAlign.Center, // 确保文本居中
+            lineHeight = (fontSize * 1.2).sp, // 设置1.5倍行距
+            // 增加50%字间距
+            letterSpacing = (fontSize * 0.1).sp
+        )
+    }
 }
+
+    }
+
