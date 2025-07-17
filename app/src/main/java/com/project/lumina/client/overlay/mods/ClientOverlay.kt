@@ -1,4 +1,4 @@
-// ClientOverlay.kt  老哥修到冒烟版
+// ClientOverlay.kt  修复版本
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.ComposeView
@@ -29,11 +28,18 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewTreeLifecycleOwner
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
+private class OverlayLifecycleOwner : LifecycleOwner {
+    private val registry = LifecycleRegistry(this)
+    override val lifecycle: Lifecycle get() = registry
+}
 
 class ClientOverlay : OverlayWindow() {
 
@@ -106,7 +112,6 @@ class ClientOverlay : OverlayWindow() {
         }
     }
 
-    // Compose Material3 弹窗
     @Composable
     fun ConfigDialog(onDismiss: () -> Unit) {
         var localText by remember { mutableStateOf(watermarkText) }
@@ -247,46 +252,37 @@ class ClientOverlay : OverlayWindow() {
         }
     }
 
-    // 弹窗用 WindowManager 挂 ComposeView
-fun showConfigDialog() {
-    // 生命周期老板
-    val lifecycleOwner = OverlayLifecycleOwner()
-
-    val composeView = ComposeView(appContext).apply {
-        // 关键：必须手动绑定
-        setViewTreeLifecycleOwner(lifecycleOwner)
-        setViewTreeViewModelStoreOwner(lifecycleOwner)
-        setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-
-        // 启动生命周期
-        lifecycleOwner.onCreate()
-
-        setContent {
-            MaterialTheme {
-                ConfigDialog {
-                    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                    wm.removeView(this)
-                    lifecycleOwner.onDestroy()
+    fun showConfigDialog() {
+        val lifecycleOwner = OverlayLifecycleOwner()
+        val composeView = ComposeView(appContext).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            
+            // 使用 ViewTreeLifecycleOwner.set() 替代 setViewTreeLifecycleOwner()
+            ViewTreeLifecycleOwner.set(this, lifecycleOwner)
+            
+            setContent {
+                MaterialTheme {
+                    ConfigDialog {
+                        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                        wm.removeView(this)
+                    }
                 }
             }
         }
+
+        val winParams = WindowManager.LayoutParams().apply {
+            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            width = WindowManager.LayoutParams.MATCH_PARENT
+            height = WindowManager.LayoutParams.MATCH_PARENT
+            format = android.graphics.PixelFormat.TRANSLUCENT
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            gravity = Gravity.CENTER
+        }
+
+        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        wm.addView(composeView, winParams)
     }
-
-    val winParams = WindowManager.LayoutParams().apply {
-        type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        width = WindowManager.LayoutParams.MATCH_PARENT
-        height = WindowManager.LayoutParams.MATCH_PARENT
-        format = android.graphics.PixelFormat.TRANSLUCENT
-        flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-        gravity = Gravity.CENTER
-    }
-
-    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    wm.addView(composeView, winParams)
-}
-
 
     @Composable
     override fun Content() {
@@ -298,12 +294,17 @@ fun showConfigDialog() {
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
 
         LaunchedEffect(rainbowEnabled) {
-            if (rainbowEnabled) {
-                while (true) {
-                    val hue = (System.currentTimeMillis() % 3600L) / 10f
-                    rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
-                    delay(50L)
+            try {
+                if (rainbowEnabled) {
+                    // 添加 kotlinx.coroutines.isActive 导入来解决未解析引用问题
+                    while (kotlinx.coroutines.isActive) {
+                        val hue = (System.currentTimeMillis() % 3600L) / 10f
+                        rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
+                        delay(50L)
+                    }
                 }
+            } catch (e: CancellationException) {
+                // 正常取消，无需处理
             }
         }
 
@@ -341,31 +342,3 @@ fun showConfigDialog() {
         }
     }
 }
-
-
-// 1. 先把这三个类粘进来，放 ClientOverlay.kt 最底下，别问为啥
-private class OverlayLifecycleOwner :
-    LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
-
-    private val lifecycleRegistry = LifecycleRegistry(this)
-    private val viewModelStore = ViewModelStore()
-    private val savedStateController = SavedStateRegistryController.create(this)
-
-    override val lifecycle: Lifecycle get() = lifecycleRegistry
-    override val viewModelStore: ViewModelStore get() = viewModelStore
-    override val savedStateRegistry: SavedStateRegistry
-        get() = savedStateController.savedStateRegistry
-
-    fun onCreate() {
-        savedStateController.performRestore(null)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-    }
-
-    fun onDestroy() {
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        viewModelStore.clear()
-    }
-}
-
-
-//KimiK2调教版
