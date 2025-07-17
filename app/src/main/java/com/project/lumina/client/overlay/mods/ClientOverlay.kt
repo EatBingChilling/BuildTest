@@ -1,30 +1,35 @@
+// 飞起来
 package com.project.lumina.client.overlay.mods
 
-import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.WindowManager
-import android.widget.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
+
+// 防止lifecycle 死掉 直接扔个空LifecycleOwner 简单粗暴
+private object NoLifecycle : androidx.lifecycle.LifecycleOwner {
+    private val reg = androidx.lifecycle.LifecycleRegistry(this)
+    override val lifecycle: androidx.lifecycle.Lifecycle get() = reg
+}
 
 class ClientOverlay : OverlayWindow() {
 
@@ -36,7 +41,7 @@ class ClientOverlay : OverlayWindow() {
     private var shadowEnabled by mutableStateOf(prefs.getBoolean("shadow", false))
     private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
     private var rainbowEnabled by mutableStateOf(prefs.getBoolean("rainbow", false))
-    private var opacity by mutableStateOf(prefs.getInt("opacity", 25)) // 新增透明度
+    private var opacity by mutableStateOf(prefs.getInt("opacity", 100).coerceIn(0, 100))
 
     private val _layoutParams by lazy {
         super.layoutParams.apply {
@@ -87,9 +92,7 @@ class ClientOverlay : OverlayWindow() {
 
         fun setOverlayEnabled(enabled: Boolean) {
             shouldShowOverlay = enabled
-            if (!enabled) {
-                dismissOverlay()
-            }
+            if (!enabled) dismissOverlay()
         }
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
@@ -99,91 +102,168 @@ class ClientOverlay : OverlayWindow() {
         }
     }
 
+    // 真正的Material3弹窗 老哥直接上Composable
+    @Composable
+    fun ConfigDialog(onDismiss: () -> Unit) {
+        val context = LocalContext.current
+        var localText by remember { mutableStateOf(watermarkText) }
+        var localRed by remember { mutableStateOf(Color.red(textColor)) }
+        var localGreen by remember { mutableStateOf(Color.green(textColor)) }
+        var localBlue by remember { mutableStateOf(Color.blue(textColor)) }
+        var localShadow by remember { mutableStateOf(shadowEnabled) }
+        var localSize by remember { mutableStateOf(fontSize - 5) }
+        var localRain by remember { mutableStateOf(rainbowEnabled) }
+        var localAlpha by remember { mutableStateOf(opacity) }
+
+        val localColor = Color.rgb(localRed, localGreen, localBlue)
+
+        Dialog(onDismissRequest = onDismiss) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("配置水印", style = MaterialTheme.typography.headlineSmall)
+
+                    OutlinedTextField(
+                        value = localText,
+                        onValueChange = { localText = it },
+                        label = { Text("水印文字") },
+                        singleLine = true
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("颜色预览", modifier = Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(ComposeColor(localColor), MaterialTheme.shapes.medium)
+                        )
+                    }
+
+                    // R G B 三兄弟
+                    listOf("红" to localRed, "绿" to localGreen, "蓝" to localBlue).forEachIndexed { idx, (label, value) ->
+                        Column {
+                            Text("$label: $value")
+                            Slider(
+                                value = value.toFloat(),
+                                onValueChange = {
+                                    when (idx) {
+                                        0 -> localRed = it.toInt()
+                                        1 -> localGreen = it.toInt()
+                                        2 -> localBlue = it.toInt()
+                                    }
+                                },
+                                valueRange = 0f..255f,
+                                steps = 255
+                            )
+                        }
+                    }
+
+                    // 字体大小
+                    Column {
+                        Text("字体大小: ${localSize + 5}")
+                        Slider(
+                            value = localSize.toFloat(),
+                            onValueChange = { localSize = it.toInt() },
+                            valueRange = 0f..295f,
+                            steps = 295
+                        )
+                    }
+
+                    // 透明度
+                    Column {
+                        Text("透明度: $localAlpha%")
+                        Slider(
+                            value = localAlpha.toFloat(),
+                            onValueChange = { localAlpha = it.toInt() },
+                            valueRange = 0f..100f,
+                            steps = 100
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("阴影")
+                        Switch(checked = localShadow, onCheckedChange = { localShadow = it })
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("彩虹")
+                        Switch(checked = localRain, onCheckedChange = { localRain = it })
+                    }
+
+                    // 按钮排排坐
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        TextButton(onClick = onDismiss) { Text("取消") }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(onClick = {
+                            watermarkText = localText
+                            textColor = localColor
+                            shadowEnabled = localShadow
+                            fontSize = localSize + 5
+                            rainbowEnabled = localRain
+                            opacity = localAlpha
+
+                            prefs.edit()
+                                .putString("text", watermarkText)
+                                .putInt("color", textColor)
+                                .putBoolean("shadow", shadowEnabled)
+                                .putInt("size", fontSize)
+                                .putBoolean("rainbow", rainbowEnabled)
+                                .putInt("opacity", opacity)
+                                .apply()
+                            onDismiss()
+                        }) {
+                            Text("保存")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 原来那个showConfigDialog直接换成Compose弹窗
     fun showConfigDialog() {
-        val dialogView = LayoutInflater.from(appContext).inflate(R.layout.overlay_config_dialog, null)
-        val editText = dialogView.findViewById<EditText>(R.id.editText)
-        val seekRed = dialogView.findViewById<SeekBar>(R.id.seekRed)
-        val seekGreen = dialogView.findViewById<SeekBar>(R.id.seekGreen)
-        val seekBlue = dialogView.findViewById<SeekBar>(R.id.seekBlue)
-        val switchShadow = dialogView.findViewById<Switch>(R.id.switchShadow)
-        val seekSize = dialogView.findViewById<SeekBar>(R.id.seekSize).apply {
-            max = 295
-        }
-        val switchRainbow = dialogView.findViewById<Switch>(R.id.switchRainbow)
-        val seekOpacity = dialogView.findViewById<SeekBar>(R.id.seekOpacity) // 新增透明度滑条
-        val colorPreview = dialogView.findViewById<TextView>(R.id.colorPreview)
-
-        editText.setText(watermarkText)
-        seekRed.progress = Color.red(textColor)
-        seekGreen.progress = Color.green(textColor)
-        seekBlue.progress = Color.blue(textColor)
-        switchShadow.isChecked = shadowEnabled
-        seekSize.progress = fontSize - 5
-        switchRainbow.isChecked = rainbowEnabled
-        seekOpacity.progress = opacity // 设置初始透明度
-
-        fun updateColorPreview() {
-            val color = Color.rgb(seekRed.progress, seekGreen.progress, seekBlue.progress)
-            colorPreview.setBackgroundColor(color)
+        val dialogView = androidx.compose.ui.platform.ComposeView(appContext).apply {
+            setContent {
+                // 套个Material3主题 不然丑哭
+                MaterialTheme {
+                    ConfigDialog { (parent as? ViewManager)?.removeView(this) }
+                }
+            }
         }
 
-        updateColorPreview()
+        val winParams = WindowManager.LayoutParams().apply {
+            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            width = WindowManager.LayoutParams.MATCH_PARENT
+            height = WindowManager.LayoutParams.MATCH_PARENT
+            format = android.graphics.PixelFormat.TRANSLUCENT
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            gravity = Gravity.CENTER
+        }
 
-        seekRed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateColorPreview()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        seekGreen.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateColorPreview()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        seekBlue.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                updateColorPreview()
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override void onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        val dialog = AlertDialog.Builder(appContext)
-            .setTitle("配置水印")
-            .setView(dialogView)
-            .setPositiveButton("确定") { _, _ ->
-                watermarkText = editText.text.toString()
-                val red = seekRed.progress
-                val green = seekGreen.progress
-                val blue = seekBlue.progress
-                textColor = Color.rgb(red, green, blue)
-                shadowEnabled = switchShadow.isChecked
-                fontSize = seekSize.progress + 5
-                rainbowEnabled = switchRainbow.isChecked
-                opacity = seekOpacity.progress // 保存透明度
-
-                prefs.edit()
-                    .putString("text", watermarkText)
-                    .putInt("color", textColor)
-                    .putBoolean("shadow", shadowEnabled)
-                    .putInt("size", fontSize)
-                    .putBoolean("rainbow", rainbowEnabled)
-                    .putInt("opacity", opacity) // 保存透明度
-                    .apply()
-            }
-            .setNegativeButton("取消", null)
-            .create()
-
-        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-        dialog.show()
+        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        wm.addView(dialogView, winParams)
     }
 
     @Composable
@@ -191,7 +271,6 @@ class ClientOverlay : OverlayWindow() {
         if (!isOverlayEnabled()) return
 
         val unifontFamily = FontFamily(Font(R.font.unifont))
-
         val text = "LuminaCN${if (watermarkText.isNotBlank()) "\n$watermarkText" else ""}"
 
         var rainbowColor by remember { mutableStateOf(ComposeColor.White) }
@@ -207,7 +286,7 @@ class ClientOverlay : OverlayWindow() {
         }
 
         val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
-        val finalColor = baseColor.copy(alpha = opacity / 100f) // 使用透明度
+        val finalColor = baseColor.copy(alpha = opacity / 100f)
 
         Box(
             modifier = Modifier
