@@ -1,4 +1,4 @@
-// ClientOverlay.kt  最终修复版
+// ClientOverlay.kt  修复最终版
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -13,13 +13,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment // 添加缺失的Alignment导入
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.platform.ViewTreeLifecycleOwner // 添加ViewTreeLifecycleOwner导入
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -35,11 +34,16 @@ import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive // 添加isActive导入
+import kotlinx.coroutines.isActive
 
 private class OverlayLifecycleOwner : LifecycleOwner {
     private val registry = LifecycleRegistry(this)
     override val lifecycle: Lifecycle get() = registry
+    
+    // 提供重置状态的方法
+    fun reset() {
+        registry.markState(Lifecycle.State.INITIALIZED)
+    }
 }
 
 class ClientOverlay : OverlayWindow() {
@@ -256,16 +260,23 @@ class ClientOverlay : OverlayWindow() {
     fun showConfigDialog() {
         val lifecycleOwner = OverlayLifecycleOwner()
         val composeView = ComposeView(appContext).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            
-            // 使用ViewTreeLifecycleOwner设置生命周期所有者
-            ViewTreeLifecycleOwner.set(this, lifecycleOwner)
+            // 使用无需ViewTreeLifecycleOwner的策略
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             
             setContent {
+                // 手动触发生命周期事件
+                lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+                lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
+                lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+                
                 MaterialTheme {
                     ConfigDialog {
                         val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                         wm.removeView(this)
+                        // 关闭时触发生命周期销毁事件
+                        lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+                        lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+                        lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                     }
                 }
             }
@@ -297,7 +308,6 @@ class ClientOverlay : OverlayWindow() {
         LaunchedEffect(rainbowEnabled) {
             try {
                 if (rainbowEnabled) {
-                    // 使用导入了的isActive
                     while (isActive) {
                         val hue = (System.currentTimeMillis() % 3600L) / 10f
                         rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
