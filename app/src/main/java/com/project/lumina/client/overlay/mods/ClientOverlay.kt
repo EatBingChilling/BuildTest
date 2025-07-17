@@ -1,4 +1,4 @@
-// ClientOverlay.kt  老哥修完版 直接糊脸上
+// ClientOverlay.kt  优化修复版
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -6,30 +6,58 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import com.project.lumina.client.R
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
+
+// 生命周期管理改进
+private class OverlayLifecycleOwner : LifecycleOwner {
+    private val registry = LifecycleRegistry(this)
+    
+    init {
+        registry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        registry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        registry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+    
+    fun destroy() {
+        registry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        registry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        registry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    }
+    
+    override val lifecycle: Lifecycle get() = registry
+}
 
 class ClientOverlay : OverlayWindow() {
 
@@ -42,6 +70,11 @@ class ClientOverlay : OverlayWindow() {
     private var fontSize by mutableStateOf(prefs.getInt("size", 28).coerceIn(5, 300))
     private var rainbowEnabled by mutableStateOf(prefs.getBoolean("rainbow", false))
     private var opacity by mutableStateOf(prefs.getInt("opacity", 100).coerceIn(0, 100))
+    private var position by mutableStateOf(prefs.getString("position", "Center") ?: "Center")
+
+    private var configDialogShown by mutableStateOf(false)
+    private var currentConfigLifecycleOwner: OverlayLifecycleOwner? = null
+    private var currentConfigComposeView: View? = null
 
     private val _layoutParams by lazy {
         super.layoutParams.apply {
@@ -97,63 +130,53 @@ class ClientOverlay : OverlayWindow() {
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
-        // 在 showConfigDialog() 里，把原来那段全扔了，换成下面这一坨
-fun showConfigDialog() {
-    val composeView = ComposeView(appContext).apply {
-        // 直接 new 一个 LifecycleOwner，简单粗暴
-        val lifecycleOwner = OverlayLifecycleOwner()
-        setViewTreeLifecycleOwner(lifecycleOwner)
-        setContent {
-            MaterialTheme {
-                ConfigDialog {
-                    // 弹窗关了就移除
-                    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                    wm.removeView(this)
-                }
-            }
+        fun showConfigDialog() {
+            overlayInstance?.showConfigDialog()
         }
     }
 
-    val winParams = WindowManager.LayoutParams().apply {
-        type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        width = WindowManager.LayoutParams.MATCH_PARENT
-        height = WindowManager.LayoutParams.MATCH_PARENT
-        format = android.graphics.PixelFormat.TRANSLUCENT
-        flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-        gravity = Gravity.CENTER
+    // 对话框关闭处理
+    private fun closeConfigDialog() {
+        try {
+            (currentConfigComposeView?.parent as? WindowManager)?.removeView(currentConfigComposeView)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        
+        currentConfigLifecycleOwner?.destroy()
+        currentConfigLifecycleOwner = null
+        currentConfigComposeView = null
+        configDialogShown = false
     }
 
-    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    wm.addView(composeView, winParams)
-}
-
-    }
-
-    // 真正的Material3弹窗 老哥直接上Composable
+    // Compose Material3 弹窗
     @Composable
     fun ConfigDialog(onDismiss: () -> Unit) {
-        val context = LocalContext.current
         var localText by remember { mutableStateOf(watermarkText) }
         var localRed by remember { mutableStateOf(Color.red(textColor)) }
         var localGreen by remember { mutableStateOf(Color.green(textColor)) }
         var localBlue by remember { mutableStateOf(Color.blue(textColor)) }
         var localShadow by remember { mutableStateOf(shadowEnabled) }
-        var localSize by remember { mutableStateOf(fontSize - 5) }
+        var localSize by remember { mutableStateOf(fontSize.toFloat()) }
         var localRain by remember { mutableStateOf(rainbowEnabled) }
-        var localAlpha by remember { mutableStateOf(opacity) }
+        var localAlpha by remember { mutableStateOf(opacity.toFloat()) }
+        var localPosition by remember { mutableStateOf(position) }
 
         val localColor = Color.rgb(localRed, localGreen, localBlue)
 
         Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            onDismissRequest = { onDismiss() },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = true
+            )
         ) {
             Surface(
                 shape = MaterialTheme.shapes.extraLarge,
                 tonalElevation = 6.dp,
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
+                    .widthIn(max = 600.dp)
+                    .fillMaxWidth(0.95f)
                     .wrapContentHeight()
             ) {
                 Column(
@@ -162,21 +185,25 @@ fun showConfigDialog() {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("配置水印", style = MaterialTheme.typography.headlineSmall)
+                    Text("水印配置", style = MaterialTheme.typography.headlineSmall)
 
+                    // 水印文本输入
                     OutlinedTextField(
                         value = localText,
-                        onValueChange = { localText = it },
+                        onValueChange = { 
+                            if (it.length <= 20) localText = it 
+                        },
                         label = { Text("水印文字") },
-                        singleLine = true
+                        singleLine = true,
+                        placeholder = { Text("输入水印文字") }
                     )
 
+                    // 颜色预览
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("颜色预览")
+                        Text("预览颜色", modifier = Modifier.weight(1f))
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
@@ -184,75 +211,102 @@ fun showConfigDialog() {
                         )
                     }
 
-                    listOf("红" to localRed, "绿" to localGreen, "蓝" to localBlue).forEachIndexed { idx, (label, value) ->
+                    // 颜色滑动选择器
+                    listOf("红" to { it: Float -> localRed = it.toInt() }, 
+                           "绿" to { it: Float -> localGreen = it.toInt() },
+                           "蓝" to { it: Float -> localBlue = it.toInt() }
+                    ).forEachIndexed { idx, (label, setter) ->
                         Column {
-                            Text("$label: $value")
+                            Text("$label: ${when (idx) {
+                                0 -> localRed
+                                1 -> localGreen
+                                else -> localBlue
+                            }}")
                             Slider(
-                                value = value.toFloat(),
-                                onValueChange = {
-                                    when (idx) {
-                                        0 -> localRed = it.toInt()
-                                        1 -> localGreen = it.toInt()
-                                        2 -> localBlue = it.toInt()
-                                    }
+                                value = when (idx) {
+                                    0 -> localRed.toFloat()
+                                    1 -> localGreen.toFloat()
+                                    else -> localBlue.toFloat()
                                 },
+                                onValueChange = setter,
                                 valueRange = 0f..255f,
                                 steps = 255
                             )
                         }
                     }
 
+                    // 字体大小
                     Column {
-                        Text("字体大小: ${localSize + 5}")
+                        Text("字体大小: ${localSize.roundToInt()} 像素")
                         Slider(
-                            value = localSize.toFloat(),
-                            onValueChange = { localSize = it.toInt() },
-                            valueRange = 0f..295f,
+                            value = localSize,
+                            onValueChange = { localSize = it },
+                            valueRange = 5f..300f,
                             steps = 295
                         )
                     }
 
+                    // 透明度
                     Column {
-                        Text("透明度: $localAlpha%")
+                        Text("透明度: ${localAlpha.roundToInt()}%")
                         Slider(
-                            value = localAlpha.toFloat(),
-                            onValueChange = { localAlpha = it.toInt() },
+                            value = localAlpha,
+                            onValueChange = { localAlpha = it },
                             valueRange = 0f..100f,
                             steps = 100
                         )
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("阴影")
-                        Switch(checked = localShadow, onCheckedChange = { localShadow = it })
+                    // 位置选择
+                    Column {
+                        Text("显示位置")
+                        Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+                            listOf("左上", "右上", "左下", "右下", "居中").forEach { pos ->
+                                FilterChip(
+                                    selected = localPosition == pos,
+                                    onClick = { localPosition = pos },
+                                    label = { Text(pos) }
+                                )
+                            }
+                        }
                     }
 
+                    // 特效开关
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("彩虹")
+                        Text("阴影效果", modifier = Modifier.weight(1f))
+                        Switch(checked = localShadow, onCheckedChange = { localShadow = it })
+                    }
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("彩虹特效", modifier = Modifier.weight(1f))
                         Switch(checked = localRain, onCheckedChange = { localRain = it })
                     }
 
+                    // 底部按钮
                     Row(
                         horizontalArrangement = Arrangement.End,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        TextButton(onClick = onDismiss) { Text("取消") }
+                        TextButton(onClick = { 
+                            onDismiss() 
+                        }) { 
+                            Text("取消") 
+                        }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(onClick = {
                             watermarkText = localText
                             textColor = localColor
                             shadowEnabled = localShadow
-                            fontSize = localSize + 5
+                            fontSize = localSize.roundToInt()
                             rainbowEnabled = localRain
-                            opacity = localAlpha
+                            opacity = localAlpha.roundToInt()
+                            position = localPosition
 
                             prefs.edit()
                                 .putString("text", watermarkText)
@@ -261,6 +315,7 @@ fun showConfigDialog() {
                                 .putInt("size", fontSize)
                                 .putBoolean("rainbow", rainbowEnabled)
                                 .putInt("opacity", opacity)
+                                .putString("position", position)
                                 .apply()
                             onDismiss()
                         }) {
@@ -272,14 +327,23 @@ fun showConfigDialog() {
         }
     }
 
-    // 用原生WindowManager弹Compose弹窗 再也不见ViewManager
+    // 弹窗用 WindowManager 挂 ComposeView
     fun showConfigDialog() {
-        val composeView = androidx.compose.ui.platform.ComposeView(appContext).apply {
+        if (configDialogShown) return
+        configDialogShown = true
+        
+        val lifecycleOwner = OverlayLifecycleOwner().also {
+            currentConfigLifecycleOwner = it
+        }
+
+        val composeView = ComposeView(appContext).apply {
+            currentConfigComposeView = this
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setViewTreeLifecycleOwner(lifecycleOwner)
             setContent {
                 MaterialTheme {
                     ConfigDialog {
-                        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                        wm.removeView(this)
+                        closeConfigDialog()
                     }
                 }
             }
@@ -291,12 +355,17 @@ fun showConfigDialog() {
             height = WindowManager.LayoutParams.MATCH_PARENT
             format = android.graphics.PixelFormat.TRANSLUCENT
             flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             gravity = Gravity.CENTER
         }
 
-        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        wm.addView(composeView, winParams)
+        try {
+            val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            wm.addView(composeView, winParams)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            closeConfigDialog()
+        }
     }
 
     @Composable
@@ -310,7 +379,7 @@ fun showConfigDialog() {
 
         LaunchedEffect(rainbowEnabled) {
             if (rainbowEnabled) {
-                while (true) {
+                while (isActive) {
                     val hue = (System.currentTimeMillis() % 3600L) / 10f
                     rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
                     delay(50L)
@@ -321,12 +390,22 @@ fun showConfigDialog() {
         val baseColor = if (rainbowEnabled) rainbowColor else ComposeColor(textColor)
         val finalColor = baseColor.copy(alpha = opacity / 100f)
 
+        // 根据位置设置不同的对齐方式
+        val (alignment, shadowOffset) = when (position) {
+            "左上" -> Pair(Alignment.TopStart, 3.dp)
+            "右上" -> Pair(Alignment.TopEnd, 3.dp)
+            "左下" -> Pair(Alignment.BottomStart, 3.dp)
+            "右下" -> Pair(Alignment.BottomEnd, 3.dp)
+            else -> Pair(Alignment.Center, 1.dp) // 居中
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = alignment
         ) {
+            // 阴影效果
             if (shadowEnabled) {
                 Text(
                     text = text,
@@ -336,10 +415,11 @@ fun showConfigDialog() {
                     textAlign = TextAlign.Center,
                     lineHeight = (fontSize * 1.5).sp,
                     letterSpacing = (fontSize * 0.1).sp,
-                    modifier = Modifier.offset(x = 1.dp, y = 1.dp)
+                    modifier = Modifier.offset(x = shadowOffset, y = shadowOffset)
                 )
             }
 
+            // 主文本
             Text(
                 text = text,
                 fontSize = fontSize.sp,
@@ -352,3 +432,7 @@ fun showConfigDialog() {
         }
     }
 }
+
+
+
+//Deepseek版
