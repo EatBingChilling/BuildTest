@@ -1,4 +1,4 @@
-// ClientOverlay.kt  修复版本
+// ClientOverlay.kt  最终修复版
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -13,11 +13,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment // 添加缺失的Alignment导入
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.platform.ViewTreeLifecycleOwner // 添加ViewTreeLifecycleOwner导入
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -28,13 +30,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ViewTreeLifecycleOwner
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.isActive // 添加isActive导入
 
 private class OverlayLifecycleOwner : LifecycleOwner {
     private val registry = LifecycleRegistry(this)
@@ -257,7 +258,7 @@ class ClientOverlay : OverlayWindow() {
         val composeView = ComposeView(appContext).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             
-            // 使用 ViewTreeLifecycleOwner.set() 替代 setViewTreeLifecycleOwner()
+            // 使用ViewTreeLifecycleOwner设置生命周期所有者
             ViewTreeLifecycleOwner.set(this, lifecycleOwner)
             
             setContent {
@@ -296,8 +297,8 @@ class ClientOverlay : OverlayWindow() {
         LaunchedEffect(rainbowEnabled) {
             try {
                 if (rainbowEnabled) {
-                    // 添加 kotlinx.coroutines.isActive 导入来解决未解析引用问题
-                    while (kotlinx.coroutines.isActive) {
+                    // 使用导入了的isActive
+                    while (isActive) {
                         val hue = (System.currentTimeMillis() % 3600L) / 10f
                         rainbowColor = ComposeColor.hsv(hue, 1f, 1f)
                         delay(50L)
