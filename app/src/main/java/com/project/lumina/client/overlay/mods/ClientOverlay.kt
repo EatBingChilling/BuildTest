@@ -97,9 +97,37 @@ class ClientOverlay : OverlayWindow() {
 
         fun isOverlayEnabled(): Boolean = shouldShowOverlay
 
-        fun showConfigDialog() {
-            overlayInstance?.showConfigDialog()
+        // 在 showConfigDialog() 里，把原来那段全扔了，换成下面这一坨
+fun showConfigDialog() {
+    val composeView = ComposeView(appContext).apply {
+        // 直接 new 一个 LifecycleOwner，简单粗暴
+        val lifecycleOwner = OverlayLifecycleOwner()
+        setViewTreeLifecycleOwner(lifecycleOwner)
+        setContent {
+            MaterialTheme {
+                ConfigDialog {
+                    // 弹窗关了就移除
+                    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                    wm.removeView(this)
+                }
+            }
         }
+    }
+
+    val winParams = WindowManager.LayoutParams().apply {
+        type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        width = WindowManager.LayoutParams.MATCH_PARENT
+        height = WindowManager.LayoutParams.MATCH_PARENT
+        format = android.graphics.PixelFormat.TRANSLUCENT
+        flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        gravity = Gravity.CENTER
+    }
+
+    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    wm.addView(composeView, winParams)
+}
+
     }
 
     // 真正的Material3弹窗 老哥直接上Composable
