@@ -1,30 +1,29 @@
-// ClientOverlay.kt  极简修复版
+// ClientOverlay.kt  传统Dialog实现版
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
+import android.app.Dialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.os.Bundle
 import android.view.Gravity
+import android.view.View
+import android.view.Window
 import android.view.WindowManager
-import androidx.compose.foundation.background
+import android.widget.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
@@ -103,173 +102,92 @@ class ClientOverlay : OverlayWindow() {
         }
     }
 
-    @Composable
-    fun ConfigDialog(onDismiss: () -> Unit) {
-        var localText by remember { mutableStateOf(watermarkText) }
-        var localRed by remember { mutableStateOf(Color.red(textColor)) }
-        var localGreen by remember { mutableStateOf(Color.green(textColor)) }
-        var localBlue by remember { mutableStateOf(Color.blue(textColor)) }
-        var localShadow by remember { mutableStateOf(shadowEnabled) }
-        var localSize by remember { mutableStateOf(fontSize - 5) }
-        var localRain by remember { mutableStateOf(rainbowEnabled) }
-        var localAlpha by remember { mutableStateOf(opacity) }
-
-        val localColor = Color.rgb(localRed, localGreen, localBlue)
-
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp,
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .wrapContentHeight()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("配置水印", style = MaterialTheme.typography.headlineSmall)
-
-                    OutlinedTextField(
-                        value = localText,
-                        onValueChange = { localText = it },
-                        label = { Text("水印文字") },
-                        singleLine = true
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("颜色预览")
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(ComposeColor(localColor), MaterialTheme.shapes.medium)
-                        )
-                    }
-
-                    listOf("红" to localRed, "绿" to localGreen, "蓝" to localBlue).forEachIndexed { idx, (label, value) ->
-                        Column {
-                            Text("$label: $value")
-                            Slider(
-                                value = value.toFloat(),
-                                onValueChange = {
-                                    when (idx) {
-                                        0 -> localRed = it.toInt()
-                                        1 -> localGreen = it.toInt()
-                                        2 -> localBlue = it.toInt()
-                                    }
-                                },
-                                valueRange = 0f..255f,
-                                steps = 255
-                            )
-                        }
-                    }
-
-                    Column {
-                        Text("字体大小: ${localSize + 5}")
-                        Slider(
-                            value = localSize.toFloat(),
-                            onValueChange = { localSize = it.toInt() },
-                            valueRange = 0f..295f,
-                            steps = 295
-                        )
-                    }
-
-                    Column {
-                        Text("透明度: $localAlpha%")
-                        Slider(
-                            value = localAlpha.toFloat(),
-                            onValueChange = { localAlpha = it.toInt() },
-                            valueRange = 0f..100f,
-                            steps = 100
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("阴影")
-                        Switch(checked = localShadow, onCheckedChange = { localShadow = it })
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("彩虹")
-                        Switch(checked = localRain, onCheckedChange = { localRain = it })
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        TextButton(onClick = onDismiss) { Text("取消") }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = {
-                            watermarkText = localText
-                            textColor = localColor
-                            shadowEnabled = localShadow
-                            fontSize = localSize + 5
-                            rainbowEnabled = localRain
-                            opacity = localAlpha
-
-                            prefs.edit()
-                                .putString("text", watermarkText)
-                                .putInt("color", textColor)
-                                .putBoolean("shadow", shadowEnabled)
-                                .putInt("size", fontSize)
-                                .putBoolean("rainbow", rainbowEnabled)
-                                .putInt("opacity", opacity)
-                                .apply()
-                            onDismiss()
-                        }) {
-                            Text("保存")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     fun showConfigDialog() {
-        val composeView = ComposeView(appContext).apply {
-            // 使用无需额外生命周期管理的策略
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-            
-            setContent {
-                MaterialTheme {
-                    ConfigDialog {
-                        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                        wm.removeView(this)
-                    }
-                }
+        val dialog = Dialog(appContext)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_watermark_config)
+        
+        // 设置对话框窗口类型为应用覆盖层
+        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+        
+        // 初始化视图
+        val textInput = dialog.findViewById<EditText>(R.id.watermark_text)
+        val colorPreview = dialog.findViewById<View>(R.id.color_preview)
+        val redSlider = dialog.findViewById<SeekBar>(R.id.red_slider)
+        val greenSlider = dialog.findViewById<SeekBar>(R.id.green_slider)
+        val blueSlider = dialog.findViewById<SeekBar>(R.id.blue_slider)
+        val sizeSlider = dialog.findViewById<SeekBar>(R.id.size_slider)
+        val opacitySlider = dialog.findViewById<SeekBar>(R.id.opacity_slider)
+        val shadowSwitch = dialog.findViewById<Switch>(R.id.shadow_switch)
+        val rainbowSwitch = dialog.findViewById<Switch>(R.id.rainbow_switch)
+        val cancelButton = dialog.findViewById<Button>(R.id.cancel_button)
+        val saveButton = dialog.findViewById<Button>(R.id.save_button)
+        
+        // 设置当前值
+        textInput.setText(watermarkText)
+        
+        val red = Color.red(textColor)
+        val green = Color.green(textColor)
+        val blue = Color.blue(textColor)
+        
+        redSlider.progress = red
+        greenSlider.progress = green
+        blueSlider.progress = blue
+        sizeSlider.progress = fontSize - 5
+        opacitySlider.progress = opacity
+        shadowSwitch.isChecked = shadowEnabled
+        rainbowSwitch.isChecked = rainbowEnabled
+        
+        // 更新颜色预览
+        updateColorPreview(colorPreview, red, green, blue)
+        
+        // 颜色滑块监听器
+        val colorChangeListener = object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                updateColorPreview(
+                    colorPreview,
+                    redSlider.progress,
+                    greenSlider.progress,
+                    blueSlider.progress
+                )
             }
+            
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         }
-
-        val winParams = WindowManager.LayoutParams().apply {
-            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            width = WindowManager.LayoutParams.MATCH_PARENT
-            height = WindowManager.LayoutParams.MATCH_PARENT
-            format = android.graphics.PixelFormat.TRANSLUCENT
-            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-            gravity = Gravity.CENTER
+        
+        redSlider.setOnSeekBarChangeListener(colorChangeListener)
+        greenSlider.setOnSeekBarChangeListener(colorChangeListener)
+        blueSlider.setOnSeekBarChangeListener(colorChangeListener)
+        
+        // 按钮监听器
+        cancelButton.setOnClickListener { dialog.dismiss() }
+        
+        saveButton.setOnClickListener {
+            watermarkText = textInput.text.toString()
+            textColor = Color.rgb(redSlider.progress, greenSlider.progress, blueSlider.progress)
+            shadowEnabled = shadowSwitch.isChecked
+            fontSize = sizeSlider.progress + 5
+            rainbowEnabled = rainbowSwitch.isChecked
+            opacity = opacitySlider.progress
+            
+            prefs.edit()
+                .putString("text", watermarkText)
+                .putInt("color", textColor)
+                .putBoolean("shadow", shadowEnabled)
+                .putInt("size", fontSize)
+                .putBoolean("rainbow", rainbowEnabled)
+                .putInt("opacity", opacity)
+                .apply()
+            
+            dialog.dismiss()
         }
-
-        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        wm.addView(composeView, winParams)
+        
+        dialog.show()
+    }
+    
+    private fun updateColorPreview(view: View, red: Int, green: Int, blue: Int) {
+        view.setBackgroundColor(Color.rgb(red, green, blue))
     }
 
     @Composable
