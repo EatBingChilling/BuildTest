@@ -22,5 +22,7 @@ touch.cpp\
     ImGui/imgui_tables.cpp \
     ImGui/backends/imgui_impl_opengl3.cpp \
     ImGui/backends/imgui_impl_android.cpp
+    
+LOCAL_SRC_FILES += ESPNative.cpp
 
 include $(BUILD_SHARED_LIBRARY)

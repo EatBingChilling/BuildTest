@@ -39,5 +39,5 @@ include(":app",
     ":Network:codec-rcon",
     ":Network:transport-raknet",
     ":minecraft-msftauth",
-    ":imgui",
+//    ":imgui",
     ":animatedux")
