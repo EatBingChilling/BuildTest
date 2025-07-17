@@ -1,4 +1,4 @@
-// ClientOverlay.kt  修复最终版
+// ClientOverlay.kt  极简修复版
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -26,25 +25,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
 import com.project.lumina.client.R
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-
-private class OverlayLifecycleOwner : LifecycleOwner {
-    private val registry = LifecycleRegistry(this)
-    override val lifecycle: Lifecycle get() = registry
-    
-    // 提供重置状态的方法
-    fun reset() {
-        registry.markState(Lifecycle.State.INITIALIZED)
-    }
-}
 
 class ClientOverlay : OverlayWindow() {
 
@@ -258,25 +244,15 @@ class ClientOverlay : OverlayWindow() {
     }
 
     fun showConfigDialog() {
-        val lifecycleOwner = OverlayLifecycleOwner()
         val composeView = ComposeView(appContext).apply {
-            // 使用无需ViewTreeLifecycleOwner的策略
+            // 使用无需额外生命周期管理的策略
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             
             setContent {
-                // 手动触发生命周期事件
-                lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-                lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
-                lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-                
                 MaterialTheme {
                     ConfigDialog {
                         val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                         wm.removeView(this)
-                        // 关闭时触发生命周期销毁事件
-                        lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-                        lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-                        lifecycleOwner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                     }
                 }
             }
