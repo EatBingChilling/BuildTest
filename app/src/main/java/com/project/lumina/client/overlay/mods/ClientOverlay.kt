@@ -16,7 +16,7 @@ import kotlinx.coroutines.*
 
 class ClientOverlay : OverlayWindow() {
 
-    /* ------------ 水印参数 ------------ */
+    /* ---------------- 水印参数 ---------------- */
     private val prefs: SharedPreferences =
         OverlayManager.currentContext!!.getSharedPreferences("lumina_overlay_prefs", Context.MODE_PRIVATE)
 
@@ -27,7 +27,7 @@ class ClientOverlay : OverlayWindow() {
     private var rainbowEnabled = prefs.getBoolean("rainbow", false)
     private var alphaValue     = prefs.getInt("alpha", 25).coerceIn(0, 100)
 
-    /* ------------ 真正的水印 View ------------ */
+    /* ---------------- 水印 TextView ---------------- */
     private val textView: TextView by lazy {
         TextView(OverlayManager.currentContext).apply {
             text = watermarkText
@@ -39,14 +39,8 @@ class ClientOverlay : OverlayWindow() {
         }
     }
 
-    /* ------------ Compose 占位（什么也不画） ------------ */
-    @androidx.compose.runtime.Composable
-    override fun Content() { /* 空着，不用 Compose */ }
-
-    /* ------------ 生命周期钩子 ------------ */
-    override fun onCreate() {
-        super.onCreate()
-        // 把 TextView 塞进 composeView，这样框架会把它加进窗口
+    /* ---------------- 彩虹循环 ---------------- */
+    init {
         composeView.addView(textView)
 
         if (rainbowEnabled) {
@@ -64,17 +58,20 @@ class ClientOverlay : OverlayWindow() {
         return Color.HSVToColor(floatArrayOf(hue.toFloat(), 1f, 1f))
     }
 
-    /* ------------ 静态接口 ------------ */
+    /* ---------------- Compose 占位 ---------------- */
+    @androidx.compose.runtime.Composable
+    override fun Content() {
+        // 空实现，父类要求
+    }
+
+    /* ---------------- 静态接口 ---------------- */
     companion object {
         private var overlayInstance: ClientOverlay? = null
-        private var shouldShowOverlay = true
 
         fun showOverlay() {
             if (!Settings.canDrawOverlays(OverlayManager.currentContext)) return
-            if (shouldShowOverlay) {
-                overlayInstance = ClientOverlay()
-                OverlayManager.showOverlayWindow(overlayInstance!!)
-            }
+            if (overlayInstance == null) overlayInstance = ClientOverlay()
+            OverlayManager.showOverlayWindow(overlayInstance!!)
         }
 
         fun dismissOverlay() {
@@ -83,13 +80,12 @@ class ClientOverlay : OverlayWindow() {
         }
 
         fun setOverlayEnabled(enabled: Boolean) {
-            shouldShowOverlay = enabled
             if (!enabled) dismissOverlay()
         }
 
-        fun isOverlayEnabled(): Boolean = shouldShowOverlay
+        fun isOverlayEnabled(): Boolean = overlayInstance != null
 
-        /* ------------ 传统 AlertDialog 配置 ------------ */
+        /* ------------ 配置弹窗 ------------ */
         private var configDialog: AlertDialog? = null
 
         fun showConfigDialog() {
@@ -129,8 +125,7 @@ class ClientOverlay : OverlayWindow() {
                     this.max = max
                     progress = init
                     setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                        override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) =
-                            set(p)
+                        override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) = set(p)
                         override fun onStartTrackingTouch(sb: SeekBar?) {}
                         override fun onStopTrackingTouch(sb: SeekBar?) {}
                     })
