@@ -1,4 +1,4 @@
-// ClientOverlay.kt  仅修复对话框尺寸
+// ClientOverlay.kt  修复background引用问题
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -7,13 +7,13 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.foundation.background // 添加background导入
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.ComposeView
@@ -31,6 +31,8 @@ import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import androidx.compose.material3.Text
+
 
 class ClientOverlay : OverlayWindow() {
 
