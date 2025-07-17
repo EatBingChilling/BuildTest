@@ -34,11 +34,6 @@ import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
 import kotlinx.coroutines.delay
 
-// 把 LifecycleOwner 提到外面 让 showConfigDialog 能看到
-private class OverlayLifecycleOwner : LifecycleOwner {
-    private val registry = LifecycleRegistry(this)
-    override val lifecycle: Lifecycle get() = registry
-}
 
 class ClientOverlay : OverlayWindow() {
 
@@ -253,37 +248,45 @@ class ClientOverlay : OverlayWindow() {
     }
 
     // 弹窗用 WindowManager 挂 ComposeView
-    fun showConfigDialog() {
-        val lifecycleOwner = OverlayLifecycleOwner()
+fun showConfigDialog() {
+    // 生命周期老板
+    val lifecycleOwner = OverlayLifecycleOwner()
 
-        val composeView = ComposeView(appContext).apply {
-            // 关键 1 让 ComposeView 能自己管理 Lifecycle
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            // 关键 2 绑定 LifecycleOwner
-            setViewTreeLifecycleOwner(lifecycleOwner)
-            setContent {
-                MaterialTheme {
-                    ConfigDialog {
-                        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                        wm.removeView(this)
-                    }
+    val composeView = ComposeView(appContext).apply {
+        // 关键：必须手动绑定
+        setViewTreeLifecycleOwner(lifecycleOwner)
+        setViewTreeViewModelStoreOwner(lifecycleOwner)
+        setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+
+        // 启动生命周期
+        lifecycleOwner.onCreate()
+
+        setContent {
+            MaterialTheme {
+                ConfigDialog {
+                    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                    wm.removeView(this)
+                    lifecycleOwner.onDestroy()
                 }
             }
         }
-
-        val winParams = WindowManager.LayoutParams().apply {
-            type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            width = WindowManager.LayoutParams.MATCH_PARENT
-            height = WindowManager.LayoutParams.MATCH_PARENT
-            format = android.graphics.PixelFormat.TRANSLUCENT
-            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-            gravity = Gravity.CENTER
-        }
-
-        val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        wm.addView(composeView, winParams)
     }
+
+    val winParams = WindowManager.LayoutParams().apply {
+        type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        width = WindowManager.LayoutParams.MATCH_PARENT
+        height = WindowManager.LayoutParams.MATCH_PARENT
+        format = android.graphics.PixelFormat.TRANSLUCENT
+        flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        gravity = Gravity.CENTER
+    }
+
+    val wm = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    wm.addView(composeView, winParams)
+}
+
 
     @Composable
     override fun Content() {
@@ -336,6 +339,31 @@ class ClientOverlay : OverlayWindow() {
                 letterSpacing = (fontSize * 0.1).sp
             )
         }
+    }
+}
+
+
+// 1. 先把这三个类粘进来，放 ClientOverlay.kt 最底下，别问为啥
+private class OverlayLifecycleOwner :
+    LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    private val viewModelStore = ViewModelStore()
+    private val savedStateController = SavedStateRegistryController.create(this)
+
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+    override val viewModelStore: ViewModelStore get() = viewModelStore
+    override val savedStateRegistry: SavedStateRegistry
+        get() = savedStateController.savedStateRegistry
+
+    fun onCreate() {
+        savedStateController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    }
+
+    fun onDestroy() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        viewModelStore.clear()
     }
 }
 
