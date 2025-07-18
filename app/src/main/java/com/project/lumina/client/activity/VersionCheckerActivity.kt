@@ -2,13 +2,7 @@ package com.project.lumina.client.activity
 
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -33,13 +26,16 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.Executors
 
-// 暴躁版本检查员 + 凤凰验证缝合版 主播你该给代码交社保了
+// 暴躁版本检查员 + 凤凰验证终极修复版
 class VersionCheckerActivity : ComponentActivity() {
 
     // 声明个验证管理器 不给activity就耍赖
     private lateinit var verificationManager: AppVerificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 关键修复：在super前设置主题！！！
+        setTheme(R.style.Theme_Phoenix) // 用你的Phoenix主题
+        
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()  // 全面屏适配 不写你手机上下黑边别赖我
         
@@ -126,7 +122,7 @@ class VersionCheckerActivity : ComponentActivity() {
     }
 }
 
-// 凤凰验证管理器全Kotlin版 Java去死吧！
+// 凤凰验证管理器全Kotlin版 终极修复
 class AppVerificationManager(
     private val activity: ComponentActivity,
     private val callback: VerificationCallback
@@ -140,8 +136,8 @@ class AppVerificationManager(
     // 系统组件
     private var verificationDialog: android.app.AlertDialog? = null
     private val executor = Executors.newSingleThreadExecutor()
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val prefs: SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val prefs: android.content.SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
     // UI组件
     private var blockerOverlay: android.view.View? = null  // 遮罩层
@@ -302,7 +298,7 @@ class AppVerificationManager(
     
     // 公告对话框（必须点"朕已阅"）
     private fun showNoticeDialog(title: String, subtitle: String, content: String, contentHash: String) {
-        MaterialAlertDialogBuilder(activity)
+        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle(title)
             .setMessage("$subtitle\n\n$content")
             .setPositiveButton("朕已阅") { _, _ ->
@@ -315,7 +311,7 @@ class AppVerificationManager(
 
     // 隐私协议对话框（拒绝就撒娇）
     private fun showPrivacyDialog(privacyContent: String, contentHash: String) {
-        MaterialAlertDialogBuilder(activity)
+        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("隐私协议")
             .setMessage(privacyContent)
             .setPositiveButton("同意") { _, _ ->
@@ -323,7 +319,7 @@ class AppVerificationManager(
                 startStep4()
             }
             .setNegativeButton("拒绝") { _, _ ->
-                MaterialAlertDialogBuilder(activity)
+                MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
                     .setTitle("牢大别肘。")
                     .setMessage("侃爷韦斯特特特特特你怎么回事呢呢呢呢呢我到你家去去去去去你脑子瓦特了了了了了")
                     .setPositiveButton("签。") { _, _ -> 
@@ -339,7 +335,7 @@ class AppVerificationManager(
 
     // 更新对话框
     private fun showUpdateDialog(name: String, version: String, updateContent: String) {
-        MaterialAlertDialogBuilder(activity)
+        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("发现新版本")
             .setMessage("$name v$version\n\n更新内容：\n$updateContent")
             .setPositiveButton("立即更新") { _, _ ->
@@ -355,7 +351,7 @@ class AppVerificationManager(
 
     // 重试对话框（网络失败时卖萌）
     private fun showRetryDialog(title: String, message: String, retryAction: () -> Unit) {
-        MaterialAlertDialogBuilder(activity)
+        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle(title)
             .setMessage("$message\n\n不一定是服务器的问题。")
             .setPositiveButton("重试") { _, _ -> retryAction() }
@@ -430,7 +426,7 @@ class AppVerificationManager(
                 @Suppress("DEPRECATION")
                 pkg.versionCode.toLong()
             }
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
             1 // 默认版本代码
         }
     }

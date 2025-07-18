@@ -1,6 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.LuminaClient" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- 重写版主题文件 -->
+    
+    <!-- Lumina主题 - 适配Compose -->
+    <style name="Theme.LuminaClient" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- 状态栏颜色 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- 导航栏颜色 -->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- 对话框主题 -->
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
+        <!-- 适配Compose -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- Phoenix主题 - 动态色彩 + 对话框兼容 -->
+    <style name="Theme.Phoenix" parent="Theme.Material3.DynamicColors.DayNight">
+        <!-- 动态色彩桥接 -->
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
+        <!-- 状态栏透明 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- 导航栏透明 -->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- 适配Compose -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- 夜间模式适配 -->
+    <style name="ThemeOverlay.Material3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <!-- 夜间模式文字颜色 -->
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <!-- 按钮颜色 -->
+        <item name="buttonBarPositiveButtonStyle">@style/AlertDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/AlertDialogButton</item>
+    </style>
+
+    <!-- 对话框按钮样式 -->
+    <style name="AlertDialogButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
 
 </resources>
