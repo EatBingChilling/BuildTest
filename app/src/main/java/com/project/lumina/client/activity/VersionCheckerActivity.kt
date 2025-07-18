@@ -2,13 +2,7 @@ package com.project.lumina.client.activity
 
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,9 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.google.android.material.dialog.MaterialAlertDialogBuilder // 关键导包！
-import com.project.lumina.R // 确保导入了自己的R文件
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.project.lumina.R.style // 关键导包！没有这个全完蛋
 import com.project.lumina.client.ui.theme.LuminaClientTheme
 import com.project.lumina.client.util.HashCat
 import kotlinx.coroutines.*
@@ -41,7 +36,7 @@ class VersionCheckerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 关键修复：在super前设置主题！！！
-        setTheme(R.style.Theme_Phoenix) // 用你的Phoenix主题
+        setTheme(style.Theme_Phoenix) // 用style代替R.style
         
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()  // 全面屏适配 不写你手机上下黑边别赖我
@@ -143,8 +138,8 @@ class AppVerificationManager(
     // 系统组件
     private var verificationDialog: android.app.AlertDialog? = null
     private val executor = Executors.newSingleThreadExecutor()
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val prefs: SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val prefs: android.content.SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     
     // UI组件
     private var blockerOverlay: android.view.View? = null  // 遮罩层
@@ -305,8 +300,8 @@ class AppVerificationManager(
     
     // 公告对话框（必须点"朕已阅"）
     private fun showNoticeDialog(title: String, subtitle: String, content: String, contentHash: String) {
-        // 关键修复：显式指定Context和主题
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        // 关键修复：使用style代替R.style
+        MaterialAlertDialogBuilder(activity, style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle(title)
             .setMessage("$subtitle\n\n$content")
             .setPositiveButton("朕已阅") { _, _ ->
@@ -319,8 +314,8 @@ class AppVerificationManager(
 
     // 隐私协议对话框（拒绝就撒娇）
     private fun showPrivacyDialog(privacyContent: String, contentHash: String) {
-        // 关键修复：显式指定Context和主题
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        // 关键修复：使用style代替R.style
+        MaterialAlertDialogBuilder(activity, style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("隐私协议")
             .setMessage(privacyContent)
             .setPositiveButton("同意") { _, _ ->
@@ -329,7 +324,7 @@ class AppVerificationManager(
             }
             .setNegativeButton("拒绝") { _, _ ->
                 // 嵌套对话框也要修复
-                MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+                MaterialAlertDialogBuilder(activity, style.ThemeOverlay_Material3_MaterialAlertDialog)
                     .setTitle("牢大别肘。")
                     .setMessage("侃爷韦斯特特特特特你怎么回事呢呢呢呢呢我到你家去去去去去你脑子瓦特了了了了了")
                     .setPositiveButton("签。") { _, _ -> 
@@ -345,8 +340,8 @@ class AppVerificationManager(
 
     // 更新对话框
     private fun showUpdateDialog(name: String, version: String, updateContent: String) {
-        // 关键修复：显式指定Context和主题
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        // 关键修复：使用style代替R.style
+        MaterialAlertDialogBuilder(activity, style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("发现新版本")
             .setMessage("$name v$version\n\n更新内容：\n$updateContent")
             .setPositiveButton("立即更新") { _, _ ->
@@ -361,8 +356,8 @@ class AppVerificationManager(
 
     // 重试对话框（网络失败时卖萌）
     private fun showRetryDialog(title: String, message: String, retryAction: () -> Unit) {
-        // 关键修复：显式指定Context和主题
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        // 关键修复：使用style代替R.style
+        MaterialAlertDialogBuilder(activity, style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle(title)
             .setMessage("$message\n\n不一定是服务器的问题。")
             .setPositiveButton("重试") { _, _ -> retryAction() }
@@ -437,7 +432,7 @@ class AppVerificationManager(
                 @Suppress("DEPRECATION")
                 pkg.versionCode.toLong()
             }
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
             1 // 默认版本代码
         }
     }
