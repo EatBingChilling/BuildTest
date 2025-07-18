@@ -189,6 +189,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("androidx.activity:activity-compose:1.8.0")
+    
 }
 
 // 添加验证任务 - 在构建时检查.so文件是否包含

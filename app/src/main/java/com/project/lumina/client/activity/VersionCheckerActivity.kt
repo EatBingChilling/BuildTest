@@ -14,8 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.R as MaterialR // 解决Material资源冲突
+import com.project.lumina.R // 关键导包！没有这个全完蛋
 import com.project.lumina.client.ui.theme.LuminaClientTheme
 import com.project.lumina.client.util.HashCat
 import kotlinx.coroutines.*
@@ -298,7 +300,7 @@ class AppVerificationManager(
     
     // 公告对话框（必须点"朕已阅"）
     private fun showNoticeDialog(title: String, subtitle: String, content: String, contentHash: String) {
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        MaterialAlertDialogBuilder(activity, MaterialR.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle(title)
             .setMessage("$subtitle\n\n$content")
             .setPositiveButton("朕已阅") { _, _ ->
@@ -311,7 +313,7 @@ class AppVerificationManager(
 
     // 隐私协议对话框（拒绝就撒娇）
     private fun showPrivacyDialog(privacyContent: String, contentHash: String) {
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        MaterialAlertDialogBuilder(activity, MaterialR.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("隐私协议")
             .setMessage(privacyContent)
             .setPositiveButton("同意") { _, _ ->
@@ -319,7 +321,7 @@ class AppVerificationManager(
                 startStep4()
             }
             .setNegativeButton("拒绝") { _, _ ->
-                MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+                MaterialAlertDialogBuilder(activity, MaterialR.style.ThemeOverlay_Material3_MaterialAlertDialog)
                     .setTitle("牢大别肘。")
                     .setMessage("侃爷韦斯特特特特特你怎么回事呢呢呢呢呢我到你家去去去去去你脑子瓦特了了了了了")
                     .setPositiveButton("签。") { _, _ -> 
@@ -335,7 +337,7 @@ class AppVerificationManager(
 
     // 更新对话框
     private fun showUpdateDialog(name: String, version: String, updateContent: String) {
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        MaterialAlertDialogBuilder(activity, MaterialR.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle("发现新版本")
             .setMessage("$name v$version\n\n更新内容：\n$updateContent")
             .setPositiveButton("立即更新") { _, _ ->
@@ -351,7 +353,7 @@ class AppVerificationManager(
 
     // 重试对话框（网络失败时卖萌）
     private fun showRetryDialog(title: String, message: String, retryAction: () -> Unit) {
-        MaterialAlertDialogBuilder(activity, R.style.ThemeOverlay_Material3_MaterialAlertDialog)
+        MaterialAlertDialogBuilder(activity, MaterialR.style.ThemeOverlay_Material3_MaterialAlertDialog)
             .setTitle(title)
             .setMessage("$message\n\n不一定是服务器的问题。")
             .setPositiveButton("重试") { _, _ -> retryAction() }
