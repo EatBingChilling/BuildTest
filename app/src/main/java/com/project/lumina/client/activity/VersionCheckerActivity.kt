@@ -30,7 +30,7 @@ class VersionCheckerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Use a defined theme or a fallback
-        setTheme(R.style.Theme_Phoenix) // Ensure Theme_Phoenix is defined in res/values/styles.xml
+        setTheme(android.R.style.Theme_Material_Light_DarkActionBar)
         // Alternative: setTheme(android.R.style.Theme_Material_Light_DarkActionBar)
         super.onCreate(savedInstanceState)
 
