@@ -18,7 +18,7 @@
     </style>
 
     <!-- Phoenix主题 - 动态色彩 + 对话框兼容 -->
-    <style name="Theme.Phoenix" parent="Theme.Material3.DynamicColors.DayNight">
+    <style name="Theme_Phoenix" parent="Theme.Material3.DynamicColors.DayNight">
         <!-- 动态色彩桥接 -->
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
         <!-- 状态栏透明 -->
