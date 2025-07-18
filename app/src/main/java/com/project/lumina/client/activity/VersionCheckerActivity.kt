@@ -3,12 +3,17 @@ package com.project.lumina.client.activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,12 +25,14 @@ import com.project.lumina.R
 import com.project.lumina.client.util.HashCat
 import kotlinx.coroutines.*
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.SocketTimeoutException
 import java.net.URL
 import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class VersionCheckerActivity : AppCompatActivity() {
 
@@ -37,52 +44,38 @@ class VersionCheckerActivity : AppCompatActivity() {
         setTheme(android.R.style.Theme_Material_Light_DarkActionBar)
         super.onCreate(savedInstanceState)
 
-        setContent {
-            LoadingPlaceholder()
+        // 显示加载界面
+        setContentView(R.layout.activity_loading) // 或者使用 Compose
+        
+        // 开始验证流程
+        verificationManager = AppVerificationManager(this) { 
+            // 验证完成后的回调
+            initializeAndStart()
         }
+        verificationManager.startVerification()
+    }
 
-        verificationManager = AppVerificationManager(
-            activity = this,
-            onSuccess = {
-                Log.d(TAG, "验证成功，正在初始化应用...")
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        initializeApp()
-                        startMainActivity()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "初始化应用失败", e)
-                        Toast.makeText(this@VersionCheckerActivity, "初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
-                        finish()
-                    }
+    private fun initializeAndStart() {
+        // 在验证完成后才初始化应用
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val kson = HashCat.getInstance()
+                    kson.LintHashInit(this@VersionCheckerActivity)
+                    delay(666)
                 }
-            },
-            onFailure = { errorMsg ->
-                Log.e(TAG, "验证失败: $errorMsg")
-                Toast.makeText(this, "验证失败: $errorMsg", Toast.LENGTH_LONG).show()
+                
+                // 启动主活动
+                startActivity(Intent(this@VersionCheckerActivity, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                })
+                finish()
+            } catch (e: Exception) {
+                Log.e(TAG, "初始化失败", e)
+                Toast.makeText(this@VersionCheckerActivity, "初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
                 finish()
             }
-        )
-        verificationManager.start()
-    }
-
-    private suspend fun initializeApp() = withContext(Dispatchers.IO) {
-        try {
-            val kson = HashCat.getInstance()
-            kson.LintHashInit(this@VersionCheckerActivity)
-            delay(666)
-            Log.d(TAG, "应用初始化完成")
-        } catch (e: Exception) {
-            Log.e(TAG, "HashCat初始化失败", e)
-            throw e
         }
-    }
-
-    private fun startMainActivity() {
-        Log.d(TAG, "启动主活动")
-        startActivity(Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        })
-        finish()
     }
 
     override fun onDestroy() {
@@ -93,257 +86,362 @@ class VersionCheckerActivity : AppCompatActivity() {
     }
 }
 
-// --- Loading Placeholder Composable ---
-
-@Composable
-fun LoadingPlaceholder() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(48.dp),
-            strokeWidth = 4.dp
-        )
-    }
-}
-
-// --- Verification Manager ---
-
+// --- 验证管理器 ---
 class AppVerificationManager(
     private val activity: AppCompatActivity,
-    private val onSuccess: () -> Unit,
-    private val onFailure: (String) -> Unit
+    private val onVerificationComplete: () -> Unit
 ) {
-    private val BASE_URL = "http://110.42.63.51:39078/d/apps"
-    private val PREFS = activity.getSharedPreferences("verify_prefs", Context.MODE_PRIVATE)
-    private val TAG = "AppVerificationManager"
-    
-    // 网络请求超时设置
-    private val CONNECT_TIMEOUT = 10000 // 10秒
-    private val READ_TIMEOUT = 15000 // 15秒
-    
-    // 使用协程替代线程池
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    fun start() {
-        scope.launch {
-            try {
-                Log.d(TAG, "开始验证流程...")
-                
-                // 1. 检查应用状态
-                val status = makeHttpRequest("$BASE_URL/appstatus/a.ini")
-                Log.d(TAG, "应用状态: $status")
-                
-                if (!status.contains("status=true")) {
-                    withContext(Dispatchers.Main) {
-                        onFailure("应用当前不可用")
-                    }
-                    return@launch
-                }
-
-                // 2. 检查并显示公告
-                try {
-                    val notice = makeHttpRequest("$BASE_URL/title/a.json")
-                    withContext(Dispatchers.Main) {
-                        showNoticeIfNeeded(notice)
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "获取公告失败，继续执行", e)
-                }
-
-                // 3. 检查并显示隐私协议
-                try {
-                    val privacy = makeHttpRequest("$BASE_URL/privary/a.txt")
-                    withContext(Dispatchers.Main) {
-                        showPrivacyIfNeeded(privacy)
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "获取隐私协议失败，继续执行", e)
-                }
-
-                // 4. 检查更新
-                try {
-                    val update = makeHttpRequest("$BASE_URL/update/a.json")
-                    withContext(Dispatchers.Main) {
-                        showUpdateIfNeeded(update)
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "检查更新失败，继续执行", e)
-                }
-
-                // 5. 验证成功
-                withContext(Dispatchers.Main) {
-                    Log.d(TAG, "验证流程完成")
-                    onSuccess()
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "验证过程中出现错误", e)
-                withContext(Dispatchers.Main) {
-                    when (e) {
-                        is SocketTimeoutException -> onFailure("网络连接超时")
-                        is IOException -> onFailure("网络连接失败")
-                        else -> onFailure("未知错误: ${e.message}")
-                    }
-                }
-            }
-        }
+    companion object {
+        private const val BASE_URL = "http://110.42.63.51:39078/d/apps"
+        private const val PREFS_NAME = "app_verification_prefs"
+        private const val KEY_NOTICE_HASH = "notice_content_hash"
+        private const val KEY_PRIVACY_HASH = "privacy_content_hash"
+        private const val TAG = "AppVerificationManager"
     }
 
-    private suspend fun makeHttpRequest(url: String): String = withContext(Dispatchers.IO) {
-        Log.d(TAG, "请求URL: $url")
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val prefs: SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    
+    private var verificationDialog: AlertDialog? = null
+    private var blockerOverlay: View? = null
+    
+    // UI 组件
+    private lateinit var step1Text: TextView
+    private lateinit var step2Text: TextView
+    private lateinit var step3Text: TextView
+    private lateinit var step4Text: TextView
+
+    fun startVerification() {
+        // 1. 阻止用户交互
+        blockUIInteraction()
         
-        val conn = URL(url).openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = CONNECT_TIMEOUT
-            conn.readTimeout = READ_TIMEOUT
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("User-Agent", "LuminaApp/1.0")
-            
-            val responseCode = conn.responseCode
-            Log.d(TAG, "响应码: $responseCode")
-            
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw IOException("HTTP错误: $responseCode")
-            }
-            
-            val response = conn.inputStream.bufferedReader().use { it.readText() }
-            Log.d(TAG, "响应内容长度: ${response.length}")
-            return@withContext response
-            
-        } catch (e: SocketTimeoutException) {
-            Log.e(TAG, "请求超时: $url", e)
-            throw e
-        } catch (e: IOException) {
-            Log.e(TAG, "网络请求失败: $url", e)
-            throw e
-        } finally {
-            conn.disconnect()
+        // 2. 显示验证对话框
+        createVerificationDialog()
+        
+        // 3. 开始第一步验证
+        startStep1()
+    }
+
+    private fun blockUIInteraction() {
+        val root = activity.window.decorView as ViewGroup
+        blockerOverlay = View(activity).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(0x22000000) // 半透明遮罩
+            setOnTouchListener { _, _ -> true } // 拦截所有触摸事件
+        }
+        root.addView(blockerOverlay)
+    }
+
+    private fun unblockUIInteraction() {
+        blockerOverlay?.let { overlay ->
+            val root = activity.window.decorView as ViewGroup
+            root.removeView(overlay)
+            blockerOverlay = null
         }
     }
 
-    private fun showNoticeIfNeeded(json: String) {
-        try {
-            val key = "notice_hash"
-            val hash = sha256(json)
-            val savedHash = PREFS.getString(key, "")
+    private fun createVerificationDialog() {
+        val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_verification, null)
+        
+        // 绑定UI组件
+        step1Text = dialogView.findViewById(R.id.step1_text)
+        step2Text = dialogView.findViewById(R.id.step2_text)
+        step3Text = dialogView.findViewById(R.id.step3_text)
+        step4Text = dialogView.findViewById(R.id.step4_text)
+
+        // 初始化步骤状态
+        step1Text.text = "步骤1: 正在连接服务器..."
+        step2Text.text = "步骤2: 等待公告传回"
+        step3Text.text = "步骤3: 等待隐私协议传回"
+        step4Text.text = "步骤4: 检查版本信息"
+
+        verificationDialog = AlertDialog.Builder(activity)
+            .setTitle("Lumina 验证")
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
             
-            Log.d(TAG, "公告哈希对比 - 当前: $hash, 已保存: $savedHash")
-            
-            if (hash != savedHash) {
-                val obj = JSONObject(json)
-                val title = obj.optString("title", "公告")
-                val subtitle = obj.optString("subtitle", "")
-                val content = obj.optString("content", "")
-                
-                if (activity.isFinishing || activity.isDestroyed) return
-                
-                AlertDialog.Builder(activity)
-                    .setTitle(title)
-                    .setMessage(if (subtitle.isNotEmpty()) "$subtitle\n\n$content" else content)
-                    .setCancelable(false)
-                    .setPositiveButton("朕已阅") { _, _ ->
-                        PREFS.edit().putString(key, hash).apply()
-                        Log.d(TAG, "公告已阅读并保存")
+        verificationDialog?.show()
+    }
+
+    // 第一步：验证应用状态
+    private fun startStep1() {
+        executor.execute {
+            try {
+                val response = makeHttpRequest("$BASE_URL/appstatus/a.ini")
+                mainHandler.post {
+                    if (parseIniStatus(response)) {
+                        step1Text.text = "步骤1: ✓ 服务器连接成功"
+                        startStep2()
+                    } else {
+                        step1Text.text = "步骤1: ✗ 应用状态验证失败"
+                        showRetryDialog("状态验证失败", "应用当前不可用，请联系开发者", ::startStep1)
                     }
-                    .show()
+                }
+            } catch (e: IOException) {
+                mainHandler.post {
+                    step1Text.text = "步骤1: ✗ 网络连接失败"
+                    showRetryDialog("网络错误", "无法连接到服务器，请检查网络", ::startStep1)
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "处理公告时出错", e)
         }
     }
 
-    private fun showPrivacyIfNeeded(txt: String) {
-        try {
-            val key = "privacy_hash"
-            val hash = sha256(txt)
-            val savedHash = PREFS.getString(key, "")
-            
-            Log.d(TAG, "隐私协议哈希对比 - 当前: $hash, 已保存: $savedHash")
-            
-            if (hash != savedHash) {
-                if (activity.isFinishing || activity.isDestroyed) return
-                
-                AlertDialog.Builder(activity)
-                    .setTitle("隐私协议")
-                    .setMessage(txt)
-                    .setCancelable(false)
-                    .setPositiveButton("同意") { _, _ ->
-                        PREFS.edit().putString(key, hash).apply()
-                        Log.d(TAG, "隐私协议已同意并保存")
-                    }
-                    .setNegativeButton("不同意") { _, _ ->
-                        Log.d(TAG, "用户拒绝隐私协议")
-                        activity.finish()
-                    }
-                    .show()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "处理隐私协议时出错", e)
-        }
-    }
+    // 第二步：处理公告
+    private fun startStep2() {
+        step2Text.text = "步骤2: 正在获取公告..."
+        executor.execute {
+            try {
+                val response = makeHttpRequest("$BASE_URL/title/a.json")
+                mainHandler.post {
+                    try {
+                        val json = JSONObject(response)
+                        val title = json.getString("title")
+                        val subtitle = json.getString("subtitle")
+                        val content = json.getString("content")
 
-    private fun showUpdateIfNeeded(json: String) {
-        try {
-            val obj = JSONObject(json)
-            val cloudVersion = obj.optLong("version", 0)
-            val localVersion = try {
-                activity.packageManager
-                    .getPackageInfo(activity.packageName, 0).longVersionCode
-            } catch (e: Exception) {
-                Log.e(TAG, "获取本地版本号失败", e)
-                0L
-            }
-            
-            Log.d(TAG, "版本对比 - 云端: $cloudVersion, 本地: $localVersion")
-            
-            if (cloudVersion > localVersion) {
-                val appName = obj.optString("name", "新版本")
-                val updateContent = obj.optString("update_content", "修复了一些问题")
-                val downloadUrl = obj.optString("download_url", "")
-                
-                if (activity.isFinishing || activity.isDestroyed) return
-                
-                AlertDialog.Builder(activity)
-                    .setTitle("发现新版本")
-                    .setMessage("$appName\n\n更新内容：\n$updateContent")
-                    .setPositiveButton("立即更新") { _, _ ->
-                        if (downloadUrl.isNotEmpty()) {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                                activity.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "打开下载链接失败", e)
-                                Toast.makeText(activity, "无法打开下载链接", Toast.LENGTH_SHORT).show()
-                            }
+                        val contentHash = getSHA256Hash(response)
+                        val savedHash = prefs.getString(KEY_NOTICE_HASH, "")
+
+                        if (contentHash != savedHash) {
+                            step2Text.text = "步骤2: 发现新公告"
+                            showNoticeDialog(title, subtitle, content, contentHash)
                         } else {
-                            Toast.makeText(activity, "下载链接不可用", Toast.LENGTH_SHORT).show()
+                            step2Text.text = "步骤2: ✓ 公告已阅读"
+                            startStep3()
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "解析公告失败", e)
+                        step2Text.text = "步骤2: ✗ 公告解析失败"
+                        startStep3() // 继续下一步
                     }
-                    .setNegativeButton("稍后更新") { _, _ ->
-                        Log.d(TAG, "用户选择稍后更新")
-                    }
-                    .show()
+                }
+            } catch (e: IOException) {
+                mainHandler.post {
+                    step2Text.text = "步骤2: ✗ 获取公告失败"
+                    startStep3() // 继续下一步
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "检查更新时出错", e)
         }
     }
 
-    private fun sha256(input: String): String {
+    // 第三步：处理隐私协议
+    private fun startStep3() {
+        step3Text.text = "步骤3: 正在获取隐私协议..."
+        executor.execute {
+            try {
+                val response = makeHttpRequest("$BASE_URL/privary/a.txt")
+                mainHandler.post {
+                    val contentHash = getSHA256Hash(response)
+                    val savedHash = prefs.getString(KEY_PRIVACY_HASH, "")
+
+                    if (contentHash != savedHash) {
+                        step3Text.text = "步骤3: 隐私协议已更新"
+                        showPrivacyDialog(response, contentHash)
+                    } else {
+                        step3Text.text = "步骤3: ✓ 隐私协议已同意"
+                        startStep4()
+                    }
+                }
+            } catch (e: IOException) {
+                mainHandler.post {
+                    step3Text.text = "步骤3: ✗ 获取协议失败"
+                    startStep4() // 继续下一步
+                }
+            }
+        }
+    }
+
+    // 第四步：检查版本更新
+    private fun startStep4() {
+        step4Text.text = "步骤4: 正在检查版本更新..."
+        executor.execute {
+            try {
+                val response = makeHttpRequest("$BASE_URL/update/a.json")
+                mainHandler.post {
+                    try {
+                        val json = JSONObject(response)
+                        val cloudVersion = json.getLong("version")
+                        val localVersion = getLocalVersionCode()
+
+                        if (cloudVersion > localVersion) {
+                            step4Text.text = "步骤4: 发现新版本"
+                            showUpdateDialog(
+                                json.getString("name"),
+                                cloudVersion.toString(),
+                                json.getString("update_content")
+                            )
+                        } else {
+                            step4Text.text = "步骤4: ✓ 已是最新版本"
+                            completeVerification()
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "版本检查失败", e)
+                        step4Text.text = "步骤4: ✗ 版本检查失败"
+                        completeVerification() // 继续完成验证
+                    }
+                }
+            } catch (e: IOException) {
+                mainHandler.post {
+                    step4Text.text = "步骤4: ✗ 无法获取版本信息"
+                    completeVerification() // 继续完成验证
+                }
+            }
+        }
+    }
+
+    // === 对话框方法 ===
+
+    private fun showNoticeDialog(title: String, subtitle: String, content: String, contentHash: String) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        AlertDialog.Builder(activity)
+            .setTitle(title)
+            .setMessage("$subtitle\n\n$content")
+            .setPositiveButton("我已阅读") { _, _ ->
+                prefs.edit().putString(KEY_NOTICE_HASH, contentHash).apply()
+                step2Text.text = "步骤2: ✓ 公告已阅读"
+                startStep3()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showPrivacyDialog(privacyContent: String, contentHash: String) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        AlertDialog.Builder(activity)
+            .setTitle("隐私协议")
+            .setMessage(privacyContent)
+            .setPositiveButton("同意") { _, _ ->
+                prefs.edit().putString(KEY_PRIVACY_HASH, contentHash).apply()
+                step3Text.text = "步骤3: ✓ 隐私协议已同意"
+                startStep4()
+            }
+            .setNegativeButton("拒绝") { _, _ ->
+                AlertDialog.Builder(activity)
+                    .setTitle("无法继续")
+                    .setMessage("必须同意隐私协议才能继续使用应用")
+                    .setPositiveButton("重新阅读") { _, _ -> 
+                        showPrivacyDialog(privacyContent, contentHash) 
+                    }
+                    .setNegativeButton("退出应用") { _, _ -> 
+                        activity.finish() 
+                    }
+                    .setCancelable(false)
+                    .show()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showUpdateDialog(name: String, version: String, updateContent: String) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        AlertDialog.Builder(activity)
+            .setTitle("发现新版本")
+            .setMessage("$name v$version\n\n更新内容：\n$updateContent")
+            .setPositiveButton("立即更新") { _, _ ->
+                Toast.makeText(activity, "正在打开下载页面", Toast.LENGTH_SHORT).show()
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://110.42.63.51:39078/apps/apks"))
+                    activity.startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "打开下载页面失败", e)
+                    Toast.makeText(activity, "无法打开下载页面", Toast.LENGTH_SHORT).show()
+                }
+                step4Text.text = "步骤4: ✓ 已打开下载页面"
+                completeVerification()
+            }
+            .setNegativeButton("稍后更新") { _, _ ->
+                step4Text.text = "步骤4: ✓ 稍后更新"
+                completeVerification()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showRetryDialog(title: String, message: String, retryAction: () -> Unit) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        AlertDialog.Builder(activity)
+            .setTitle(title)
+            .setMessage("$message\n\n请检查网络连接后重试")
+            .setPositiveButton("重试") { _, _ -> retryAction() }
+            .setNegativeButton("退出") { _, _ ->
+                Toast.makeText(activity, "验证失败，应用退出", Toast.LENGTH_SHORT).show()
+                activity.finish()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    // 完成验证
+    private fun completeVerification() {
+        verificationDialog?.dismiss()
+        verificationDialog = null
+        unblockUIInteraction()
+        
+        Toast.makeText(activity, "验证完成", Toast.LENGTH_SHORT).show()
+        
+        // 调用完成回调
+        onVerificationComplete()
+    }
+
+    // === 工具方法 ===
+
+    private fun makeHttpRequest(urlString: String): String {
+        val url = URL(urlString)
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "GET"
+        conn.connectTimeout = 10000
+        conn.readTimeout = 10000
+
+        if (conn.responseCode != 200) {
+            throw IOException("HTTP ${conn.responseCode}")
+        }
+
+        return conn.inputStream.bufferedReader().use { it.readText() }
+    }
+
+    private fun parseIniStatus(iniContent: String): Boolean {
+        return iniContent.contains("status=true")
+    }
+
+    private fun getSHA256Hash(input: String): String {
         return try {
-            val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-            bytes.joinToString("") { "%02x".format(it) }
+            val md = MessageDigest.getInstance("SHA-256")
+            val hash = md.digest(input.toByteArray())
+            hash.joinToString("") { "%02x".format(it) }
         } catch (e: Exception) {
             Log.e(TAG, "SHA256计算失败", e)
-            input.hashCode().toString()
+            "hash_failed_${System.currentTimeMillis()}"
+        }
+    }
+
+    private fun getLocalVersionCode(): Long {
+        return try {
+            val packageInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                packageInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.versionCode.toLong()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "获取版本号失败", e)
+            1L
         }
     }
 
     fun onDestroy() {
-        Log.d(TAG, "销毁验证管理器")
-        scope.cancel()
+        executor.shutdownNow()
+        verificationDialog?.dismiss()
+        verificationDialog = null
+        unblockUIInteraction()
     }
 }
