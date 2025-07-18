@@ -300,7 +300,7 @@ class ConnectionInfoWindow : OverlayWindow() {
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     Text(
-                        text = "添加服务器 > §bLumina | 127.0.0.1:19132",
+                        text = "在游戏里添加服务器 IP 127.0.0.1 端口 19132",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center,

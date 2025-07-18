@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/step1_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="步骤1: 等待中..."
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/step2_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="步骤2: 等待中..."
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/step3_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="步骤3: 等待中..."
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/step4_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="步骤4: 等待中..."
+        android:textSize="16sp" />
+
+</LinearLayout>

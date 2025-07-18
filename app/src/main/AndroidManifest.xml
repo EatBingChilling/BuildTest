@@ -85,6 +85,9 @@
             </intent-filter>
         </activity>
         <activity android:name=".activity.CrashHandlerActivity" />
+                <activity
+    android:name=".WebviewDownloader"
+    android:exported="false" />
 
         <service
             android:name=".service.Services"
