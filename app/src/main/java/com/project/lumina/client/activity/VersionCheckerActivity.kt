@@ -5,15 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import com.project.lumina.R
 import com.project.lumina.client.util.HashCat
@@ -30,17 +30,15 @@ class VersionCheckerActivity : AppCompatActivity() {
     private lateinit var verificationManager: AppVerificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.Theme_Phoenix)   // 用下面那个 AppCompat 主题
+        setTheme(R.style.Theme_Phoenix) // Ensure Theme_Phoenix is defined in res/values/styles.xml
         super.onCreate(savedInstanceState)
 
-        val composeView = ComposeView(this).apply {
-            setContent {
-                LoadingPlaceholder()
-            }
+        setContent {
+            LoadingPlaceholder()
         }
-        setContentView(composeView)
 
-        verificationManager = AppVerificationManager(this,
+        verificationManager = AppVerificationManager(
+            activity = this,
             onSuccess = {
                 CoroutineScope(Dispatchers.Main).launch {
                     initializeApp()
@@ -74,7 +72,23 @@ class VersionCheckerActivity : AppCompatActivity() {
     }
 }
 
-// --- 验证管理器 ---
+// --- Loading Placeholder Composable ---
+
+@Composable
+fun LoadingPlaceholder() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(48.dp),
+            strokeWidth = 4.dp
+        )
+    }
+}
+
+// --- Verification Manager ---
 
 class AppVerificationManager(
     private val activity: AppCompatActivity,
@@ -167,7 +181,7 @@ class AppVerificationManager(
                 .setTitle("发现新版本")
                 .setMessage("${obj.getString("name")}\n\n更新内容：\n${obj.getString("update_content")}")
                 .setPositiveButton("立即更新") { _, _ ->
-                    // 这里你自己跳下载页
+                    // Implement download page navigation here
                 }
                 .setNegativeButton("下次再说") { _, _ -> }
                 .show()
