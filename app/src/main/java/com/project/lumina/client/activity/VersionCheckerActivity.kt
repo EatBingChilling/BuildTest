@@ -8,7 +8,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
@@ -30,7 +29,9 @@ class VersionCheckerActivity : AppCompatActivity() {
     private lateinit var verificationManager: AppVerificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Use a defined theme or a fallback
         setTheme(R.style.Theme_Phoenix) // Ensure Theme_Phoenix is defined in res/values/styles.xml
+        // Alternative: setTheme(android.R.style.Theme_Material_Light_DarkActionBar)
         super.onCreate(savedInstanceState)
 
         setContent {

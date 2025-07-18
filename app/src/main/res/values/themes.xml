@@ -18,11 +18,11 @@
     </style>
 
     <!-- Phoenix主题 - 动态色彩 + 对话框兼容 -->
-       <style name="Theme_Phoenix" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="colorPrimary">#FF6200EE</item>
-        <item name="colorPrimaryDark">#FF3700B3</item>
-        <item name="colorAccent">#FF03DAC5</item>
-        <item name="android:windowBackground">@android:color/white</item>
+    <style name="Theme.Phoenix" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here, e.g., colors, fonts, etc. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
     </style>
     <!-- 夜间模式适配 -->
     <style name="ThemeOverlay.Material3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
