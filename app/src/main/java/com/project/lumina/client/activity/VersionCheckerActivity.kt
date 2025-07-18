@@ -27,6 +27,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.Executors
+import com.google.android.material.R as MaterialR
+
 
 // 暴躁版本检查员 + 凤凰验证终极修复版
 class VersionCheckerActivity : ComponentActivity() {
