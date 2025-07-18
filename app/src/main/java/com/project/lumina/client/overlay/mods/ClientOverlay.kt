@@ -1,4 +1,4 @@
-// ClientOverlay.kt  仅修复对话框宽度
+// ClientOverlay.kt  最终修复版
 package com.project.lumina.client.overlay.mods
 
 import android.app.Application
@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.view.Window
 import android.view.WindowManager
 import android.widget.*
 import androidx.compose.foundation.layout.*
@@ -104,9 +105,6 @@ class ClientOverlay : OverlayWindow() {
         val inflater = LayoutInflater.from(appContext)
         val dialogView = inflater.inflate(R.layout.dialog_watermark_config, null)
         
-        // 设置对话框宽度
-        dialogView.minimumWidth = (appContext.resources.displayMetrics.widthPixels * 0.9).toInt()
-        
         // 初始化视图
         val textInput = dialogView.findViewById<EditText>(R.id.watermark_text)
         val colorPreview = dialogView.findViewById<View>(R.id.color_preview)
@@ -158,16 +156,19 @@ class ClientOverlay : OverlayWindow() {
         blueSlider.setOnSeekBarChangeListener(colorChangeListener)
         
         // 创建对话框
-        val dialog = Dialog(appContext)
+        val dialog = android.app.Dialog(appContext) // 明确指定android.app.Dialog
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(dialogView)
         
         // 设置对话框窗口参数
-        dialog.window?.apply {
-            setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-            setLayout(
-                (appContext.resources.displayMetrics.widthPixels * 0.9).toInt(),
-                WindowManager.LayoutParams.WRAP_CONTENT
-            )
+        val window = dialog.window
+        if (window != null) {
+            val params = window.attributes
+            params.width = (appContext.resources.displayMetrics.widthPixels * 0.9).toInt()
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT
+            params.gravity = Gravity.CENTER
+            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            window.attributes = params
         }
         
         // 按钮监听器
