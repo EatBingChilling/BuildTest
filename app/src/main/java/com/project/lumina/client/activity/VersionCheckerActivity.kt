@@ -21,7 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.project.lumina.R
+import com.project.lumina.client.R
 import com.project.lumina.client.util.HashCat
 import kotlinx.coroutines.*
 import org.json.JSONObject
