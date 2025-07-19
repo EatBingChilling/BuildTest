@@ -2,192 +2,203 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
     android:padding="16dp">
 
-    <!-- 总体进度指示器 -->
-    <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:id="@+id/progress_indicator"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:indicatorColor="?attr/colorPrimary"
-        app:trackColor="?attr/colorOutlineVariant"
-        app:trackThickness="8dp" />
-
-    <!-- 状态文本 -->
-    <TextView
-        android:id="@+id/status_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
+    <!-- 左侧：进度和状态 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
         android:gravity="center"
-        android:text="正在进行应用验证，请稍候..."
-        android:textAppearance="?attr/textAppearanceBodyLarge"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+        android:orientation="vertical"
+        android:paddingEnd="16dp">
 
-    <!-- 步骤 1: 服务器连接 -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/step1_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="1dp">
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress_indicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:indicatorColor="?attr/colorPrimary"
+            app:trackColor="?attr/colorOutlineVariant"
+            app:trackThickness="8dp" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="正在进行应用验证，请稍候..."
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:text="所有验证步骤必须通过才能使用应用"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textStyle="italic" />
+    </LinearLayout>
+
+    <!-- 右侧：步骤列表（可滚动） -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/step1_progress"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="16dp"
-                android:visibility="gone"
-                app:indicatorSize="24dp"
-                app:trackThickness="3dp" />
-
-            <TextView
-                android:id="@+id/step1_text"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:drawablePadding="12dp"
-                android:text="步骤 1: 正在连接服务器..."
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
-
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- 步骤 2: 公告检查 -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/step2_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="1dp">
-
-        <LinearLayout
+        <!-- 步骤 1 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/step1_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="1dp">
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/step2_progress"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="16dp"
-                android:visibility="gone"
-                app:indicatorSize="24dp"
-                app:trackThickness="3dp" />
-
-            <TextView
-                android:id="@+id/step2_text"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:drawablePadding="12dp"
-                android:text="步骤 2: 等待公告传回"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/step1_progress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="16dp"
+                    android:visibility="gone"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp" />
 
-    <!-- 步骤 3: 隐私协议 -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/step3_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="1dp">
+                <TextView
+                    android:id="@+id/step1_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="步骤 1: 正在连接服务器..."
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <LinearLayout
+        <!-- 步骤 2 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/step2_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="1dp">
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/step3_progress"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="16dp"
-                android:visibility="gone"
-                app:indicatorSize="24dp"
-                app:trackThickness="3dp" />
-
-            <TextView
-                android:id="@+id/step3_text"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:drawablePadding="12dp"
-                android:text="步骤 3: 等待隐私协议传回"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/step2_progress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="16dp"
+                    android:visibility="gone"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp" />
 
-    <!-- 步骤 4: 版本检查 -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/step4_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="1dp">
+                <TextView
+                    android:id="@+id/step2_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="步骤 2: 等待公告传回"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <LinearLayout
+        <!-- 步骤 3 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/step3_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="1dp">
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/step4_progress"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:layout_marginEnd="16dp"
-                android:visibility="gone"
-                app:indicatorSize="24dp"
-                app:trackThickness="3dp" />
-
-            <TextView
-                android:id="@+id/step4_text"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:drawablePadding="12dp"
-                android:text="步骤 4: 检查版本信息"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/step3_progress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="16dp"
+                    android:visibility="gone"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp" />
+
+                <TextView
+                    android:id="@+id/step3_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="步骤 3: 等待隐私协议传回"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 步骤 4 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/step4_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/step4_progress"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="16dp"
+                    android:visibility="gone"
+                    app:indicatorSize="24dp"
+                    app:trackThickness="3dp" />
+
+                <TextView
+                    android:id="@+id/step4_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="步骤 4: 检查版本信息"
+                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- 底部提示信息 -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:text="所有验证步骤必须通过才能使用应用"
-        android:textAppearance="?attr/textAppearanceBodySmall"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:textStyle="italic" />
-
+    </ScrollView>
 </LinearLayout>
