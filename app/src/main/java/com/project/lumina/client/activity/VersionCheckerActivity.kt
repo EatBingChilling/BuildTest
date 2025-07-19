@@ -45,7 +45,8 @@ class VersionCheckerActivity : AppCompatActivity() {
     private val TAG = "VersionCheckerActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(androidx.appcompat.R.style.Theme_Material3_DynamicColors_DayNight)
+        setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
+
         super.onCreate(savedInstanceState)
 
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
