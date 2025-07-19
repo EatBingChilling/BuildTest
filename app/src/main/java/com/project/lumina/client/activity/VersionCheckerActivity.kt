@@ -30,7 +30,6 @@ class VersionCheckerActivity : AppCompatActivity() {
         setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
         super.onCreate(savedInstanceState)
 
-        // 处理系统边距
         window.decorView.setOnApplyWindowInsetsListener { v, insets ->
             v.setPadding(
                 insets.systemWindowInsetLeft,
@@ -309,7 +308,8 @@ class AppVerificationManager(
 
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
-            handler.postDelayed({ onVerificationComplete() }, 800)
+            // 关键修复：显式 Runnable，消除递归类型推断报错
+            handler.postDelayed(Runnable { onVerificationComplete() }, 800)
         }
     }
 
@@ -377,7 +377,7 @@ class AppVerificationManager(
             .setCancelable(false)
             .show()
 
-    /* ---------- 工具 ---------- */
+    /* ---------- 网络 & 工具 ---------- */
     private fun makeHttpRequest(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
