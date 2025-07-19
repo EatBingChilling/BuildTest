@@ -1,67 +1,3 @@
-package com.project.lumina.client.activity
-
-import android.annotation.SuppressLint
-import android.content.*
-import android.net.Uri
-import android.os.*
-import android.util.Log
-import android.view.View
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.progressindicator.CircularProgressIndicator
-import com.google.android.material.progressindicator.LinearProgressIndicator
-import com.project.lumina.client.R
-import kotlinx.coroutines.*
-import org.json.JSONObject
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
-import java.security.MessageDigest
-import java.util.concurrent.Executors
-
-class VersionCheckerActivity : AppCompatActivity() {
-
-    private lateinit var verificationManager: AppVerificationManager
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
-        super.onCreate(savedInstanceState)
-
-        window.decorView.setOnApplyWindowInsetsListener { v, insets ->
-            v.setPadding(
-                insets.systemWindowInsetLeft,
-                insets.systemWindowInsetTop,
-                insets.systemWindowInsetRight,
-                insets.systemWindowInsetBottom
-            )
-            insets
-        }
-
-        setContentView(R.layout.activity_loading_md3)
-
-        verificationManager = AppVerificationManager(this) {
-            CoroutineScope(Dispatchers.Main).launch {
-                withContext(Dispatchers.IO) { delay(666) }
-                startActivity(Intent(this@VersionCheckerActivity, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                })
-                finish()
-            }
-        }
-        verificationManager.startVerification()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::verificationManager.isInitialized) verificationManager.onDestroy()
-    }
-}
-
-/* ------------------------------------------------------------------------ */
-
 class AppVerificationManager(
     private val activity: AppCompatActivity,
     private val onVerificationComplete: () -> Unit
@@ -308,8 +244,12 @@ class AppVerificationManager(
 
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
-            // 关键修复：显式 Runnable，消除递归类型推断报错
-            handler.postDelayed(Runnable { onVerificationComplete() }, 800)
+            // 问题修复点 - 使用对象表达式代替Lambda
+            handler.postDelayed(object : Runnable {
+                override fun run() {
+                    onVerificationComplete()
+                }
+            }, 800)
         }
     }
 
