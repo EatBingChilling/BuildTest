@@ -10,8 +10,8 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @ToString(doNotUseGetters = true)
 public class ToastRequestPacket implements BedrockPacket {
 
-    private String title;
-    private String content;
+    public String title;
+    public String content;
 
     @Override
     public PacketSignal handle(BedrockPacketHandler handler) {

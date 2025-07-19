@@ -10,10 +10,10 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class PlaySoundPacket implements BedrockPacket {
-    private String sound;
-    private Vector3f position;
-    private float volume;
-    private float pitch;
+    public String sound;
+    public Vector3f position;
+    public float volume;
+    public float pitch;
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {

@@ -10,7 +10,7 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class UpdateClientOptionsPacket implements BedrockPacket {
-    private GraphicsMode graphicsMode;
+    public GraphicsMode graphicsMode;
 
     @Override
     public PacketSignal handle(BedrockPacketHandler handler) {

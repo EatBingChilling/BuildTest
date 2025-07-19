@@ -3,7 +3,6 @@ package org.cloudburstmc.protocol.bedrock.packet;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-import org.cloudburstmc.protocol.bedrock.data.auth.AuthPayload;
 import org.cloudburstmc.protocol.common.PacketSignal;
 
 import java.util.ArrayList;
@@ -13,16 +12,8 @@ import java.util.List;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class SubClientLoginPacket implements BedrockPacket {
-    /**
-     * The JWT payload signed by Minecraft's authentication server.
-     * Assuming this is a valid signature, it can be trusted to contain the player's identity and other information.
-     */
-    private AuthPayload authPayload;
-    /**
-     * The JWT payload signed by the client.
-     * The client can modify this, so it should not be trusted.
-     */
-    private String clientJwt;
+    public final List<String> chain = new ArrayList<>();
+    public String extra;
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {

@@ -10,21 +10,21 @@ import java.util.Set;
 @Data
 @EqualsAndHashCode(doNotUseGetters = true)
 public class MoveEntityDeltaPacket implements BedrockPacket {
-    private long runtimeEntityId;
+    public long runtimeEntityId;
 
-    private final Set<Flag> flags = EnumSet.noneOf(Flag.class);
+    public final Set<Flag> flags = EnumSet.noneOf(Flag.class);
 
-    private int deltaX;
-    private int deltaY;
-    private int deltaZ;
+    public int deltaX;
+    public int deltaY;
+    public int deltaZ;
 
-    private float x;
-    private float y;
-    private float z;
+    public float x;
+    public float y;
+    public float z;
 
-    private float pitch;
-    private float yaw;
-    private float headYaw;
+    public float pitch;
+    public float yaw;
+    public float headYaw;
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {

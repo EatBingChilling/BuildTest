@@ -64,12 +64,8 @@ public class BiomeDefinitionListSerializer_v800 implements BedrockPacketSerializ
         packet.setBiomes(new BiomeDefinitions(indexedBiomes));
     }
 
-    protected void writeDefinitionId(ByteBuf buffer, BedrockCodecHelper helper, BiomeDefinitionData definition, SequencedHashSet<String> strings) {
-        helper.writeOptional(buffer, Objects::nonNull, definition.getId(), (buf, id) -> buf.writeShortLE(strings.addAndGetIndex(id)));
-    }
-
     protected void writeDefinition(ByteBuf buffer, BedrockCodecHelper helper, BiomeDefinitionData definition, SequencedHashSet<String> strings) {
-        this.writeDefinitionId(buffer, helper, definition, strings);
+        helper.writeOptional(buffer, Objects::nonNull, definition.getId(), (buf, id) -> buf.writeShortLE(strings.addAndGetIndex(id)));
         buffer.writeFloatLE(definition.getTemperature());
         buffer.writeFloatLE(definition.getDownfall());
         buffer.writeFloatLE(definition.getRedSporeDensity());
@@ -90,12 +86,9 @@ public class BiomeDefinitionListSerializer_v800 implements BedrockPacketSerializ
                 (buf, aHelper, data) -> writeDefinitionChunkGen(buf, aHelper, data, strings));
     }
 
-    protected Indexed<String> readDefinitionId(ByteBuf buffer, BedrockCodecHelper helper, List<String> strings) {
-        return helper.readOptional(buffer, null, (buf, aHelper) -> new Indexed<>(strings, buf.readUnsignedShortLE()));
-    }
-
     protected BiomeDefinitionData readDefinition(ByteBuf buffer, BedrockCodecHelper helper, List<String> strings) {
-        Indexed<String> id = this.readDefinitionId(buffer, helper, strings);
+        Indexed<String> id = helper.readOptional(buffer, null,
+                (buf, aHelper) -> new Indexed<>(strings, buf.readUnsignedShortLE()));
         float temperature = buffer.readFloatLE();
         float downfall = buffer.readFloatLE();
         float redSporeDensity = buffer.readFloatLE();

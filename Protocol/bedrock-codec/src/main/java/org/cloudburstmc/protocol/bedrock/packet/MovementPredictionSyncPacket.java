@@ -14,18 +14,18 @@ import java.util.Set;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class MovementPredictionSyncPacket implements BedrockPacket {
-    private long runtimeEntityId;
+    public long runtimeEntityId;
 
-    private final Set<EntityFlag> flags = new ObjectOpenHashSet<>();
-    private Vector3f boundingBox;
+    public final Set<EntityFlag> flags = new ObjectOpenHashSet<>();
+    public Vector3f boundingBox;
 
-    private float speed;
-    private float underwaterSpeed;
-    private float lavaSpeed;
-    private float jumpStrength;
-    private float health;
-    private float hunger;
-    private boolean flying;
+    public float speed;
+    public float underwaterSpeed;
+    public float lavaSpeed;
+    public float jumpStrength;
+    public float health;
+    public float hunger;
+    public boolean flying;
 
 
     @Override

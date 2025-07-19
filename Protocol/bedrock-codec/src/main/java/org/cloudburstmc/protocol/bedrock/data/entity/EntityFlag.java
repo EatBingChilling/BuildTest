@@ -156,7 +156,6 @@ public enum EntityFlag {
     RENDER_WHEN_INVISIBLE,
     /**
      * @since v786
-     * ROTATION_AXIS_ALIGNED since v827
      */
     BODY_ROTATION_AXIS_ALIGNED,
     /**

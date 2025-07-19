@@ -15,8 +15,8 @@ import java.util.UUID;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class PlayerListPacket implements BedrockPacket {
-    private final List<Entry> entries = new ObjectArrayList<>();
-    private Action action;
+    public final List<Entry> entries = new ObjectArrayList<>();
+    public Action action;
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {
@@ -37,18 +37,18 @@ public class PlayerListPacket implements BedrockPacket {
     @ToString(doNotUseGetters = true)
     @EqualsAndHashCode(doNotUseGetters = true)
     public final static class Entry {
-        private final UUID uuid;
-        private long entityId;
-        private String name;
-        private String xuid;
-        private String platformChatId;
-        private int buildPlatform;
-        private SerializedSkin skin;
-        private boolean teacher;
-        private boolean host;
-        private boolean trustedSkin;
-        private boolean subClient;
-        private Color color;
+        public final UUID uuid;
+        public long entityId;
+        public String name;
+        public String xuid;
+        public String platformChatId;
+        public int buildPlatform;
+        public SerializedSkin skin;
+        public boolean teacher;
+        public boolean host;
+        public boolean trustedSkin;
+        public boolean subClient;
+        public int color;
     }
 
     @Override
@@ -60,4 +60,3 @@ public class PlayerListPacket implements BedrockPacket {
         }
     }
 }
-

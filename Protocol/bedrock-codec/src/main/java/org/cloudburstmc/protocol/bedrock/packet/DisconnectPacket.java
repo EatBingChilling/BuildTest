@@ -10,13 +10,13 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class DisconnectPacket implements BedrockPacket {
-    private DisconnectFailReason reason = DisconnectFailReason.UNKNOWN;
-    private boolean messageSkipped;
-    private String kickMessage;
+    public DisconnectFailReason reason = DisconnectFailReason.UNKNOWN;
+    public boolean messageSkipped;
+    public String kickMessage;
     /**
      * @since v712
      */
-    private String filteredMessage = "";
+    public String filteredMessage = "";
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {
