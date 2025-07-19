@@ -30,7 +30,7 @@ class VersionCheckerActivity : AppCompatActivity() {
         setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
         super.onCreate(savedInstanceState)
 
-        // 沉浸式边距
+        // 处理系统边距
         window.decorView.setOnApplyWindowInsetsListener { v, insets ->
             v.setPadding(
                 insets.systemWindowInsetLeft,
@@ -45,7 +45,7 @@ class VersionCheckerActivity : AppCompatActivity() {
 
         verificationManager = AppVerificationManager(this) {
             CoroutineScope(Dispatchers.Main).launch {
-                withContext(Dispatchers.IO) { delay(666) } // 模拟初始化
+                withContext(Dispatchers.IO) { delay(666) }
                 startActivity(Intent(this@VersionCheckerActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 })
@@ -61,7 +61,7 @@ class VersionCheckerActivity : AppCompatActivity() {
     }
 }
 
-/* -------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------ */
 
 class AppVerificationManager(
     private val activity: AppCompatActivity,
@@ -180,7 +180,7 @@ class AppVerificationManager(
         }
     }
 
-    /* ----------------- 4 步流程 ----------------- */
+    /* -------------- 四步验证 -------------- */
     private fun startStep1() {
         executor.execute {
             try {
@@ -227,7 +227,6 @@ class AppVerificationManager(
                             startStep3()
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "公告解析失败", e)
                         step2Passed = true
                         setStepStatus(2, StepStatus.ERROR, "公告解析失败，跳过")
                         updateProgress()
@@ -235,12 +234,10 @@ class AppVerificationManager(
                     }
                 }
             } catch (e: IOException) {
-                handler.post {
-                    step2Passed = true
-                    setStepStatus(2, StepStatus.ERROR, "获取公告失败，跳过")
-                    updateProgress()
-                    startStep3()
-                }
+                step2Passed = true
+                setStepStatus(2, StepStatus.ERROR, "获取公告失败，跳过")
+                updateProgress()
+                startStep3()
             }
         }
     }
@@ -263,10 +260,8 @@ class AppVerificationManager(
                     }
                 }
             } catch (e: IOException) {
-                handler.post {
-                    setStepStatus(3, StepStatus.ERROR, "获取协议失败")
-                    showRetryDialog("隐私协议获取失败", "无法获取隐私协议，这是必需的步骤", ::startStep3)
-                }
+                setStepStatus(3, StepStatus.ERROR, "获取协议失败")
+                showRetryDialog("隐私协议获取失败", "无法获取隐私协议，这是必需的步骤", ::startStep3)
             }
         }
     }
@@ -297,7 +292,6 @@ class AppVerificationManager(
                             checkAllStepsComplete()
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "版本检查失败", e)
                         step4Passed = true
                         setStepStatus(4, StepStatus.ERROR, "版本检查失败，跳过")
                         updateProgress()
@@ -305,12 +299,10 @@ class AppVerificationManager(
                     }
                 }
             } catch (e: IOException) {
-                handler.post {
-                    step4Passed = true
-                    setStepStatus(4, StepStatus.ERROR, "无法获取版本信息，跳过")
-                    updateProgress()
-                    checkAllStepsComplete()
-                }
+                step4Passed = true
+                setStepStatus(4, StepStatus.ERROR, "无法获取版本信息，跳过")
+                updateProgress()
+                checkAllStepsComplete()
             }
         }
     }
@@ -318,7 +310,6 @@ class AppVerificationManager(
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
             handler.postDelayed({ onVerificationComplete() }, 800)
-
         }
     }
 
@@ -386,7 +377,7 @@ class AppVerificationManager(
             .setCancelable(false)
             .show()
 
-    /* ---------- 网络 & 工具 ---------- */
+    /* ---------- 工具 ---------- */
     private fun makeHttpRequest(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
