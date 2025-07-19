@@ -12,17 +12,17 @@ import java.util.List;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class TextPacket implements BedrockPacket {
-    public Type type;
-    public boolean needsTranslation;
-    public String sourceName;
-    public String message;
-    public List<String> parameters = new ObjectArrayList<>();
-    public String xuid;
-    public String platformChatId = "";
+    private Type type;
+    private boolean needsTranslation;
+    private String sourceName;
+    private String message;
+    private List<String> parameters = new ObjectArrayList<>();
+    private String xuid;
+    private String platformChatId = "";
     /**
      * @since v685
      */
-    public String filteredMessage = "";
+    private String filteredMessage = "";
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {

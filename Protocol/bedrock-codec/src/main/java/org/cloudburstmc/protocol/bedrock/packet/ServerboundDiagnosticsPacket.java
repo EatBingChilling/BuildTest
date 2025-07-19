@@ -9,15 +9,15 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class ServerboundDiagnosticsPacket implements BedrockPacket{
-    public float avgFps;
-    public float avgServerSimTickTimeMS;
-    public float avgClientSimTickTimeMS;
-    public float avgBeginFrameTimeMS;
-    public float avgInputTimeMS;
-    public float avgRenderTimeMS;
-    public float avgEndFrameTimeMS;
-    public float avgRemainderTimePercent;
-    public float avgUnaccountedTimePercent;
+    private float avgFps;
+    private float avgServerSimTickTimeMS;
+    private float avgClientSimTickTimeMS;
+    private float avgBeginFrameTimeMS;
+    private float avgInputTimeMS;
+    private float avgRenderTimeMS;
+    private float avgEndFrameTimeMS;
+    private float avgRemainderTimePercent;
+    private float avgUnaccountedTimePercent;
 
     @Override
     public PacketSignal handle(BedrockPacketHandler handler) {

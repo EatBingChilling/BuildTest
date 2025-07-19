@@ -10,9 +10,9 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class EntityEventPacket implements BedrockPacket {
-    public long runtimeEntityId;
-    public EntityEventType type;
-    public int data;
+    private long runtimeEntityId;
+    private EntityEventType type;
+    private int data;
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {

@@ -9,9 +9,9 @@ import org.cloudburstmc.protocol.common.PacketSignal;
 @EqualsAndHashCode(doNotUseGetters = true)
 @ToString(doNotUseGetters = true)
 public class AnimatePacket implements BedrockPacket {
-    public float rowingTime;
-    public Action action;
-    public long runtimeEntityId;
+    private float rowingTime;
+    private Action action;
+    private long runtimeEntityId;
 
     @Override
     public final PacketSignal handle(BedrockPacketHandler handler) {
