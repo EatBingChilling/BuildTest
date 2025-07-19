@@ -1,28 +1,14 @@
 package com.project.lumina.client.activity
 
-import androidx.appcompat.app.AlertDialog
-import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
+import android.content.*
 import android.net.Uri
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -30,73 +16,51 @@ import com.project.lumina.client.R
 import com.project.lumina.client.util.HashCat
 import kotlinx.coroutines.*
 import org.json.JSONObject
-import java.io.BufferedReader
 import java.io.IOException
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 
 class VersionCheckerActivity : AppCompatActivity() {
 
     private lateinit var verificationManager: AppVerificationManager
-    private val TAG = "VersionCheckerActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
-
         super.onCreate(savedInstanceState)
 
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(
-                left = systemBars.left,
-                top = systemBars.top,
-                right = systemBars.right,
-                bottom = systemBars.bottom
-            )
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.updatePadding(sys.left, sys.top, sys.right, sys.bottom)
             insets
         }
 
         setContentView(R.layout.activity_loading_md3)
 
         verificationManager = AppVerificationManager(this) {
-            initializeAndStart()
-        }
-        verificationManager.startVerification()
-    }
-
-    private fun initializeAndStart() {
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
+            CoroutineScope(Dispatchers.Main).launch {
                 withContext(Dispatchers.IO) {
                     val kson = HashCat.getInstance()
                     kson.LintHashInit(this@VersionCheckerActivity)
                     delay(666)
                 }
-
                 startActivity(Intent(this@VersionCheckerActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 })
                 finish()
-            } catch (e: Exception) {
-                Log.e(TAG, "初始化失败", e)
-                Toast.makeText(this@VersionCheckerActivity, "初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
-                finish()
             }
         }
+        verificationManager.startVerification()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::verificationManager.isInitialized) {
-            verificationManager.onDestroy()
-        }
+        if (::verificationManager.isInitialized) verificationManager.onDestroy()
     }
 }
 
+/* -------------------------------------------------------------------------- */
 class AppVerificationManager(
     private val activity: AppCompatActivity,
     private val onVerificationComplete: () -> Unit
@@ -109,18 +73,17 @@ class AppVerificationManager(
         private const val TAG = "AppVerificationManager"
     }
 
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val prefs: SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val executor = Executors.newSingleThreadExecutor()
+    private val handler = Handler(Looper.getMainLooper())
+    private val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private var verificationDialog: AlertDialog? = null
-
+    /* ---------- 控件 ---------- */
     private lateinit var progressIndicator: LinearProgressIndicator
     private lateinit var statusText: TextView
-    private lateinit var step1Card: MaterialCardView
-    private lateinit var step2Card: MaterialCardView
-    private lateinit var step3Card: MaterialCardView
-    private lateinit var step4Card: MaterialCardView
+    private lateinit var step1Card: View
+    private lateinit var step2Card: View
+    private lateinit var step3Card: View
+    private lateinit var step4Card: View
     private lateinit var step1Text: TextView
     private lateinit var step2Text: TextView
     private lateinit var step3Text: TextView
@@ -136,129 +99,107 @@ class AppVerificationManager(
     private var step4Passed = false
 
     fun startVerification() {
-        createMaterial3VerificationDialog()
+        bindViews()
+        initializeStepUI()
         startStep1()
     }
 
-    private fun createMaterial3VerificationDialog() {
-        val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_verification_md3, null)
+    private fun bindViews() {
+        progressIndicator = activity.findViewById(R.id.progress_indicator)
+        statusText = activity.findViewById(R.id.status_text)
 
-        progressIndicator = dialogView.findViewById(R.id.progress_indicator)
-        statusText = dialogView.findViewById(R.id.status_text)
+        step1Card = activity.findViewById(R.id.step1_card)
+        step2Card = activity.findViewById(R.id.step2_card)
+        step3Card = activity.findViewById(R.id.step3_card)
+        step4Card = activity.findViewById(R.id.step4_card)
 
-        step1Card = dialogView.findViewById(R.id.step1_card)
-        step2Card = dialogView.findViewById(R.id.step2_card)
-        step3Card = dialogView.findViewById(R.id.step3_card)
-        step4Card = dialogView.findViewById(R.id.step4_card)
+        step1Text = activity.findViewById(R.id.step1_text)
+        step2Text = activity.findViewById(R.id.step2_text)
+        step3Text = activity.findViewById(R.id.step3_text)
+        step4Text = activity.findViewById(R.id.step4_text)
 
-        step1Text = dialogView.findViewById(R.id.step1_text)
-        step2Text = dialogView.findViewById(R.id.step2_text)
-        step3Text = dialogView.findViewById(R.id.step3_text)
-        step4Text = dialogView.findViewById(R.id.step4_text)
-
-        step1Progress = dialogView.findViewById(R.id.step1_progress)
-        step2Progress = dialogView.findViewById(R.id.step2_progress)
-        step3Progress = dialogView.findViewById(R.id.step3_progress)
-        step4Progress = dialogView.findViewById(R.id.step4_progress)
-
-        initializeStepUI()
-
-        verificationDialog = MaterialAlertDialogBuilder(activity)
-            .setTitle("Lumina 验证")
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-
-        verificationDialog?.show()
+        step1Progress = activity.findViewById(R.id.step1_progress)
+        step2Progress = activity.findViewById(R.id.step2_progress)
+        step3Progress = activity.findViewById(R.id.step3_progress)
+        step4Progress = activity.findViewById(R.id.step4_progress)
     }
 
     private fun initializeStepUI() {
         progressIndicator.progress = 0
         statusText.text = "正在进行应用验证，请稍候..."
-
         setStepStatus(1, StepStatus.IN_PROGRESS, "正在连接服务器...")
         setStepStatus(2, StepStatus.WAITING, "等待公告传回")
         setStepStatus(3, StepStatus.WAITING, "等待隐私协议传回")
         setStepStatus(4, StepStatus.WAITING, "检查版本信息")
     }
 
-    private enum class StepStatus {
-        WAITING, IN_PROGRESS, SUCCESS, ERROR
-    }
+    private enum class StepStatus { WAITING, IN_PROGRESS, SUCCESS, ERROR }
 
-    private fun setStepStatus(stepNumber: Int, status: StepStatus, text: String) {
-        val card: MaterialCardView
-        val textView: TextView
-        val progress: CircularProgressIndicator
-
-        when (stepNumber) {
-            1 -> { card = step1Card; textView = step1Text; progress = step1Progress }
-            2 -> { card = step2Card; textView = step2Text; progress = step2Progress }
-            3 -> { card = step3Card; textView = step3Text; progress = step3Progress }
-            4 -> { card = step4Card; textView = step4Text; progress = step4Progress }
-            else -> return
+    private fun setStepStatus(step: Int, status: StepStatus, text: String) = handler.post {
+        val txt = when (step) {
+            1 -> step1Text
+            2 -> step2Text
+            3 -> step3Text
+            4 -> step4Text
+            else -> return@post
+        }
+        val progress = when (step) {
+            1 -> step1Progress
+            2 -> step2Progress
+            3 -> step3Progress
+            4 -> step4Progress
+            else -> return@post
         }
 
-        textView.text = text.replace("\\n", "\n")
-
+        txt.text = text.replace("\\n", "\n")
         when (status) {
             StepStatus.WAITING -> {
                 progress.visibility = View.GONE
-                textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                txt.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             }
             StepStatus.IN_PROGRESS -> {
                 progress.visibility = View.VISIBLE
                 progress.isIndeterminate = true
-                textView.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                txt.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             }
             StepStatus.SUCCESS -> {
                 progress.visibility = View.GONE
-                textView.setCompoundDrawablesWithIntrinsicBounds(
-                    R.drawable.ic_check_circle_24, 0, 0, 0
-                )
+                txt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_check_circle_24, 0, 0, 0)
             }
             StepStatus.ERROR -> {
                 progress.visibility = View.GONE
-                textView.setCompoundDrawablesWithIntrinsicBounds(
-                    R.drawable.ic_error_24, 0, 0, 0
-                )
+                txt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_error_24, 0, 0, 0)
             }
         }
     }
 
     private fun updateProgress() {
-        var completedSteps = 0
-        if (step1Passed) completedSteps++
-        if (step2Passed) completedSteps++
-        if (step3Passed) completedSteps++
-        if (step4Passed) completedSteps++
-
-        val progress = (completedSteps * 100) / 4
-        progressIndicator.setProgress(progress, true)
-
-        if (completedSteps == 4) {
-            statusText.text = "验证完成！正在启动应用..."
+        val done = listOf(step1Passed, step2Passed, step3Passed, step4Passed).count { it }
+        handler.post {
+            progressIndicator.setProgress(done * 100 / 4, true)
+            if (done == 4) statusText.text = "验证完成！正在启动应用..."
         }
     }
 
     private fun startStep1() {
         executor.execute {
             try {
-                val response = makeHttpRequest("$BASE_URL/appstatus/a.ini")
-                mainHandler.post {
-                    if (parseIniStatus(response)) {
+                val resp = makeHttpRequest("$BASE_URL/appstatus/a.ini")
+                val ok = parseIniStatus(resp)
+                handler.post {
+                    if (ok) {
                         step1Passed = true
-                        setStepStatus(1, StepStatus.SUCCESS, "✓ 服务器连接成功")
+                        setStepStatus(1, StepStatus.SUCCESS, "服务器连接成功")
                         updateProgress()
                         startStep2()
                     } else {
-                        setStepStatus(1, StepStatus.ERROR, "✗ 应用状态验证失败\\n应用当前不可用")
+                        setStepStatus(1, StepStatus.ERROR, "应用状态验证失败\n应用当前不可用")
                         showRetryDialog("状态验证失败", "应用当前不可用，请联系开发者", ::startStep1)
                     }
                 }
             } catch (e: IOException) {
-                mainHandler.post {
-                    setStepStatus(1, StepStatus.ERROR, "✗ 网络连接失败\\n请检查网络设置")
+                handler.post {
+                    setStepStatus(1, StepStatus.ERROR, "网络连接失败\n请检查网络设置")
                     showRetryDialog("网络错误", "无法连接到服务器，请检查网络", ::startStep1)
                 }
             }
@@ -269,38 +210,35 @@ class AppVerificationManager(
         setStepStatus(2, StepStatus.IN_PROGRESS, "正在获取公告...")
         executor.execute {
             try {
-                val response = makeHttpRequest("$BASE_URL/title/a.json")
-                mainHandler.post {
+                val resp = makeHttpRequest("$BASE_URL/title/a.json")
+                handler.post {
                     try {
-                        val json = JSONObject(response)
+                        val json = JSONObject(resp)
                         val title = json.getString("title")
                         val subtitle = json.getString("subtitle")
                         val content = json.getString("content")
-
-                        val contentHash = getSHA256Hash(response)
-                        val savedHash = prefs.getString(KEY_NOTICE_HASH, "")
-
-                        if (contentHash != savedHash) {
-                            setStepStatus(2, StepStatus.IN_PROGRESS, "发现新公告\\n等待用户阅读")
-                            showNoticeDialog(title, subtitle, content, contentHash)
+                        val hash = getSHA256Hash(resp)
+                        if (prefs.getString(KEY_NOTICE_HASH, "") != hash) {
+                            setStepStatus(2, StepStatus.IN_PROGRESS, "发现新公告\n等待用户阅读")
+                            showNoticeDialog(title, subtitle, content, hash)
                         } else {
                             step2Passed = true
-                            setStepStatus(2, StepStatus.SUCCESS, "✓ 公告已阅读")
+                            setStepStatus(2, StepStatus.SUCCESS, "公告已阅读")
                             updateProgress()
                             startStep3()
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "解析公告失败", e)
-                        setStepStatus(2, StepStatus.ERROR, "✗ 公告解析失败\\n将跳过此步骤")
+                        Log.e(TAG, "公告解析失败", e)
                         step2Passed = true
+                        setStepStatus(2, StepStatus.ERROR, "公告解析失败\n将跳过此步骤")
                         updateProgress()
                         startStep3()
                     }
                 }
             } catch (e: IOException) {
-                mainHandler.post {
-                    setStepStatus(2, StepStatus.ERROR, "✗ 获取公告失败\\n将跳过此步骤")
+                handler.post {
                     step2Passed = true
+                    setStepStatus(2, StepStatus.ERROR, "获取公告失败\n将跳过此步骤")
                     updateProgress()
                     startStep3()
                 }
@@ -312,24 +250,22 @@ class AppVerificationManager(
         setStepStatus(3, StepStatus.IN_PROGRESS, "正在获取隐私协议...")
         executor.execute {
             try {
-                val response = makeHttpRequest("$BASE_URL/privary/a.txt")
-                mainHandler.post {
-                    val contentHash = getSHA256Hash(response)
-                    val savedHash = prefs.getString(KEY_PRIVACY_HASH, "")
-
-                    if (contentHash != savedHash) {
-                        setStepStatus(3, StepStatus.IN_PROGRESS, "隐私协议已更新\\n必须同意才能继续")
-                        showPrivacyDialog(response, contentHash)
+                val resp = makeHttpRequest("$BASE_URL/privary/a.txt")
+                handler.post {
+                    val hash = getSHA256Hash(resp)
+                    if (prefs.getString(KEY_PRIVACY_HASH, "") != hash) {
+                        setStepStatus(3, StepStatus.IN_PROGRESS, "隐私协议已更新\n必须同意才能继续")
+                        showPrivacyDialog(resp, hash)
                     } else {
                         step3Passed = true
-                        setStepStatus(3, StepStatus.SUCCESS, "✓ 隐私协议已同意")
+                        setStepStatus(3, StepStatus.SUCCESS, "隐私协议已同意")
                         updateProgress()
                         startStep4()
                     }
                 }
             } catch (e: IOException) {
-                mainHandler.post {
-                    setStepStatus(3, StepStatus.ERROR, "✗ 获取协议失败\\n无法继续使用")
+                handler.post {
+                    setStepStatus(3, StepStatus.ERROR, "获取协议失败\n无法继续使用")
                     showRetryDialog("隐私协议获取失败", "无法获取隐私协议，这是必需的步骤", ::startStep3)
                 }
             }
@@ -340,40 +276,39 @@ class AppVerificationManager(
         setStepStatus(4, StepStatus.IN_PROGRESS, "正在检查版本更新...")
         executor.execute {
             try {
-                val response = makeHttpRequest("$BASE_URL/update/a.json")
-                mainHandler.post {
+                val resp = makeHttpRequest("$BASE_URL/update/a.json")
+                handler.post {
                     try {
-                        val json = JSONObject(response)
-                        val cloudVersion = json.getLong("version")
-                        val localVersion = getLocalVersionCode()
-
-                        if (cloudVersion > localVersion) {
-                            setStepStatus(4, StepStatus.IN_PROGRESS, "发现新版本\\n等待用户选择")
+                        val json = JSONObject(resp)
+                        val cloud = json.getLong("version")
+                        val local = getLocalVersionCode()
+                        if (cloud > local) {
+                            setStepStatus(4, StepStatus.IN_PROGRESS, "发现新版本\n等待用户选择")
                             showUpdateDialog(
                                 json.getString("name"),
-                                cloudVersion.toString(),
+                                cloud.toString(),
                                 json.getString("update_content"),
-                                localVersion,
-                                cloudVersion
+                                local,
+                                cloud
                             )
                         } else {
                             step4Passed = true
-                            setStepStatus(4, StepStatus.SUCCESS, "✓ 已是最新版本\\n版本号: $localVersion")
+                            setStepStatus(4, StepStatus.SUCCESS, "已是最新版本\n版本号: $local")
                             updateProgress()
                             checkAllStepsComplete()
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "版本检查失败", e)
-                        setStepStatus(4, StepStatus.ERROR, "✗ 版本检查失败\\n将跳过此步骤")
                         step4Passed = true
+                        setStepStatus(4, StepStatus.ERROR, "版本检查失败\n将跳过此步骤")
                         updateProgress()
                         checkAllStepsComplete()
                     }
                 }
             } catch (e: IOException) {
-                mainHandler.post {
-                    setStepStatus(4, StepStatus.ERROR, "✗ 无法获取版本信息\\n将跳过此步骤")
+                handler.post {
                     step4Passed = true
+                    setStepStatus(4, StepStatus.ERROR, "无法获取版本信息\n将跳过此步骤")
                     updateProgress()
                     checkAllStepsComplete()
                 }
@@ -383,43 +318,33 @@ class AppVerificationManager(
 
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
-            Handler(Looper.getMainLooper()).postDelayed({
-                completeVerification()
-            }, 1000)
+            handler.postDelayed({ onVerificationComplete() }, 1000)
         }
     }
 
-    private fun showNoticeDialog(title: String, subtitle: String, content: String, contentHash: String) {
-        if (activity.isFinishing || activity.isDestroyed) return
-
-        val fullContent = "$subtitle\n\n$content".replace("\\n", "\n")
-
+    /* ---------- Dialogs for notice / privacy / update / retry ---------- */
+    private fun showNoticeDialog(title: String, subtitle: String, content: String, hash: String) =
         MaterialAlertDialogBuilder(activity)
             .setTitle(title)
-            .setMessage(fullContent)
+            .setMessage("$subtitle\n\n$content".replace("\\n", "\n"))
             .setPositiveButton("我已阅读") { _, _ ->
-                prefs.edit().putString(KEY_NOTICE_HASH, contentHash).apply()
+                prefs.edit().putString(KEY_NOTICE_HASH, hash).apply()
                 step2Passed = true
-                setStepStatus(2, StepStatus.SUCCESS, "✓ 公告已阅读")
+                setStepStatus(2, StepStatus.SUCCESS, "公告已阅读")
                 updateProgress()
                 startStep3()
             }
             .setCancelable(false)
             .show()
-    }
 
-    private fun showPrivacyDialog(privacyContent: String, contentHash: String) {
-        if (activity.isFinishing || activity.isDestroyed) return
-
-        val formattedContent = privacyContent.replace("\\n", "\n")
-
+    private fun showPrivacyDialog(content: String, hash: String) =
         MaterialAlertDialogBuilder(activity)
             .setTitle("隐私协议")
-            .setMessage(formattedContent)
+            .setMessage(content.replace("\\n", "\n"))
             .setPositiveButton("同意") { _, _ ->
-                prefs.edit().putString(KEY_PRIVACY_HASH, contentHash).apply()
+                prefs.edit().putString(KEY_PRIVACY_HASH, hash).apply()
                 step3Passed = true
-                setStepStatus(3, StepStatus.SUCCESS, "✓ 隐私协议已同意")
+                setStepStatus(3, StepStatus.SUCCESS, "隐私协议已同意")
                 updateProgress()
                 startStep4()
             }
@@ -427,124 +352,66 @@ class AppVerificationManager(
                 MaterialAlertDialogBuilder(activity)
                     .setTitle("无法继续")
                     .setMessage("必须同意隐私协议才能继续使用应用")
-                    .setPositiveButton("重新阅读") { _, _ ->
-                        showPrivacyDialog(privacyContent, contentHash)
-                    }
-                    .setNegativeButton("退出应用") { _, _ ->
-                        activity.finish()
-                    }
+                    .setPositiveButton("重新阅读") { _, _ -> showPrivacyDialog(content, hash) }
+                    .setNegativeButton("退出应用") { _, _ -> activity.finish() }
                     .setCancelable(false)
                     .show()
             }
             .setCancelable(false)
             .show()
-    }
 
-    private fun showUpdateDialog(name: String, version: String, updateContent: String, localVersion: Long, cloudVersion: Long) {
-        if (activity.isFinishing || activity.isDestroyed) return
-
-        val formattedContent = "当前版本: $localVersion\n最新版本: $cloudVersion\n\n更新内容：\n$updateContent".replace("\\n", "\n")
-
+    private fun showUpdateDialog(name: String, ver: String, content: String, local: Long, cloud: Long) =
         MaterialAlertDialogBuilder(activity)
             .setTitle("发现新版本")
-            .setMessage("$name v$version\n\n$formattedContent")
+            .setMessage("$name v$ver\n\n当前版本: $local\n最新版本: $cloud\n\n更新内容：\n${content.replace("\\n", "\n")}")
             .setPositiveButton("立即更新") { _, _ ->
-                Toast.makeText(activity, "正在打开下载页面", Toast.LENGTH_SHORT).show()
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://110.42.63.51:39078/apps/apks"))
-                    activity.startActivity(intent)
-                    activity.finish()
-                } catch (e: Exception) {
-                    Log.e(TAG, "打开下载页面失败", e)
-                    Toast.makeText(activity, "无法打开下载页面", Toast.LENGTH_SHORT).show()
-                    step4Passed = true
-                    setStepStatus(4, StepStatus.SUCCESS, "✓ 跳过更新")
-                    updateProgress()
-                    checkAllStepsComplete()
-                }
+                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://110.42.63.51:39078/apps/apks")))
+                activity.finish()
             }
             .setNegativeButton("跳过更新") { _, _ ->
                 step4Passed = true
-                setStepStatus(4, StepStatus.SUCCESS, "✓ 跳过更新\\n当前版本: $localVersion")
+                setStepStatus(4, StepStatus.SUCCESS, "跳过更新\n当前版本: $local")
                 updateProgress()
                 checkAllStepsComplete()
             }
             .setCancelable(false)
             .show()
-    }
 
-    private fun showRetryDialog(title: String, message: String, retryAction: () -> Unit) {
-        if (activity.isFinishing || activity.isDestroyed) return
-
-        val fullMessage = "$message\n\n请检查网络连接后重试".replace("\\n", "\n")
-
+    private fun showRetryDialog(title: String, msg: String, action: () -> Unit) =
         MaterialAlertDialogBuilder(activity)
             .setTitle(title)
-            .setMessage(fullMessage)
-            .setPositiveButton("重试") { _, _ -> retryAction() }
-            .setNegativeButton("退出") { _, _ ->
-                Toast.makeText(activity, "验证失败，应用退出", Toast.LENGTH_SHORT).show()
-                activity.finish()
-            }
+            .setMessage(msg.replace("\\n", "\n"))
+            .setPositiveButton("重试") { _, _ -> action() }
+            .setNegativeButton("退出") { _, _ -> activity.finish() }
             .setCancelable(false)
             .show()
-    }
 
-    private fun completeVerification() {
-        verificationDialog?.dismiss()
-        verificationDialog = null
-        Toast.makeText(activity, "验证完成，正在启动应用", Toast.LENGTH_SHORT).show()
-        onVerificationComplete()
-    }
-
-    private fun makeHttpRequest(urlString: String): String {
-        val url = URL(urlString)
-        val conn = url.openConnection() as HttpURLConnection
-        conn.requestMethod = "GET"
-        conn.connectTimeout = 15000
-        conn.readTimeout = 15000
-        conn.setRequestProperty("User-Agent", "Lumina Android Client")
-
-        if (conn.responseCode != 200) {
-            throw IOException("HTTP ${conn.responseCode}: ${conn.responseMessage}")
+    /* ---------- 工具 ---------- */
+    private fun makeHttpRequest(url: String): String {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.apply {
+            requestMethod = "GET"
+            connectTimeout = 15000
+            readTimeout = 15000
+            setRequestProperty("User-Agent", "Lumina Android Client")
         }
-
+        if (conn.responseCode != 200) throw IOException("HTTP ${conn.responseCode}")
         return conn.inputStream.bufferedReader().use { it.readText() }
     }
 
-    private fun parseIniStatus(iniContent: String): Boolean {
-        return iniContent.contains("status=true", ignoreCase = true)
-    }
+    private fun parseIniStatus(s: String) = s.contains("status=true", ignoreCase = true)
+    private fun getSHA256Hash(input: String): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(input.toByteArray())
+            .joinToString("") { "%02x".format(it) }
 
-    private fun getSHA256Hash(input: String): String {
-        return try {
-            val md = MessageDigest.getInstance("SHA-256")
-            val hash = md.digest(input.toByteArray())
-            hash.joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            Log.e(TAG, "SHA256计算失败", e)
-            "hash_failed_${System.currentTimeMillis()}"
+    private fun getLocalVersionCode(): Long =
+        activity.packageManager.getPackageInfo(activity.packageName, 0).let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) it.longVersionCode
+            else @Suppress("DEPRECATION") it.versionCode.toLong()
         }
-    }
-
-    private fun getLocalVersionCode(): Long {
-        return try {
-            val packageInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                packageInfo.longVersionCode
-            } else {
-                @Suppress("DEPRECATION")
-                packageInfo.versionCode.toLong()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "获取版本号失败", e)
-            1L
-        }
-    }
 
     fun onDestroy() {
         executor.shutdownNow()
-        verificationDialog?.dismiss()
-        verificationDialog = null
     }
 }
