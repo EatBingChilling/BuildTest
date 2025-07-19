@@ -317,7 +317,8 @@ class AppVerificationManager(
 
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
-            handler.postDelayed(onVerificationComplete, 800)
+            handler.postDelayed({ onVerificationComplete() }, 800)
+
         }
     }
 
