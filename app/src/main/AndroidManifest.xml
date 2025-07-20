@@ -70,6 +70,7 @@
         <activity
             android:name=".activity.VersionCheckerActivity"
             android:exported="false"
+            android:theme="@style/Theme.Phoenix"
             android:screenOrientation="landscape" />
         <activity
             android:name=".activity.MainActivity"
