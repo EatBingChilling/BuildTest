@@ -1,3 +1,79 @@
+package com.project.lumina.client.activity
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.View
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.project.lumina.client.R
+import org.json.JSONObject
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.MessageDigest
+import java.util.concurrent.Executors
+
+class VersionCheckerActivity : AppCompatActivity() {
+
+    private lateinit var verificationManager: AppVerificationManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // 设置应用主题
+        setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
+        super.onCreate(savedInstanceState)
+        
+        // 设置窗口边距处理
+        window.decorView.setOnApplyWindowInsetsListener { v, insets ->
+            v.setPadding(
+                insets.systemWindowInsetLeft,
+                insets.systemWindowInsetTop,
+                insets.systemWindowInsetRight,
+                insets.systemWindowInsetBottom
+            )
+            insets
+        }
+        
+        // 设置布局
+        setContentView(R.layout.activity_loading_md3)
+        
+        // 初始化验证管理器
+        verificationManager = AppVerificationManager(this) {
+            // 延迟后跳转到主界面
+            val handler = Handler(Looper.getMainLooper())
+            handler.postDelayed({
+                startActivity(Intent(this@VersionCheckerActivity, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                })
+                finish()
+            }, 666)
+        }
+        
+        // 开始验证流程
+        verificationManager.startVerification()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 清理验证管理器
+        if (::verificationManager.isInitialized) {
+            verificationManager.onDestroy()
+        }
+    }
+}
+
+/* ------------------------------------------------------------------------ */
+
 class AppVerificationManager(
     private val activity: AppCompatActivity,
     private val onVerificationComplete: () -> Unit
@@ -14,7 +90,7 @@ class AppVerificationManager(
     private val handler = Handler(Looper.getMainLooper())
     private val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    // 控件
+    // UI控件引用
     private lateinit var progressIndicator: LinearProgressIndicator
     private lateinit var statusText: TextView
     private lateinit var step1Card: MaterialCardView
@@ -30,6 +106,7 @@ class AppVerificationManager(
     private lateinit var step3Progress: CircularProgressIndicator
     private lateinit var step4Progress: CircularProgressIndicator
 
+    // 步骤完成状态
     private var step1Passed = false
     private var step2Passed = false
     private var step3Passed = false
@@ -115,7 +192,7 @@ class AppVerificationManager(
         }
     }
 
-    /* -------------- 四步验证 -------------- */
+    /* -------------- 四步验证流程 -------------- */
     private fun startStep1() {
         executor.execute {
             try {
@@ -244,7 +321,7 @@ class AppVerificationManager(
 
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
-            // 问题修复点 - 使用对象表达式代替Lambda
+            // 修复点：使用对象表达式替代Lambda
             handler.postDelayed(object : Runnable {
                 override fun run() {
                     onVerificationComplete()
@@ -253,8 +330,8 @@ class AppVerificationManager(
         }
     }
 
-    /* ---------- Dialog 工具 ---------- */
-    private fun showNoticeDialog(title: String, subtitle: String, content: String, hash: String) =
+    /* ---------- 对话框工具 ---------- */
+    private fun showNoticeDialog(title: String, subtitle: String, content: String, hash: String) {
         MaterialAlertDialogBuilder(activity)
             .setTitle(title)
             .setMessage("$subtitle\n\n$content")
@@ -267,8 +344,9 @@ class AppVerificationManager(
             }
             .setCancelable(false)
             .show()
+    }
 
-    private fun showPrivacyDialog(content: String, hash: String) =
+    private fun showPrivacyDialog(content: String, hash: String) {
         MaterialAlertDialogBuilder(activity)
             .setTitle("隐私协议")
             .setMessage(content)
@@ -290,8 +368,9 @@ class AppVerificationManager(
             }
             .setCancelable(false)
             .show()
+    }
 
-    private fun showUpdateDialog(name: String, ver: String, content: String, local: Long, cloud: Long) =
+    private fun showUpdateDialog(name: String, ver: String, content: String, local: Long, cloud: Long) {
         MaterialAlertDialogBuilder(activity)
             .setTitle("发现新版本")
             .setMessage("$name v$ver\n\n当前版本: $local\n最新版本: $cloud\n\n更新内容：\n$content")
@@ -307,8 +386,9 @@ class AppVerificationManager(
             }
             .setCancelable(false)
             .show()
+    }
 
-    private fun showRetryDialog(title: String, msg: String, action: () -> Unit) =
+    private fun showRetryDialog(title: String, msg: String, action: () -> Unit) {
         MaterialAlertDialogBuilder(activity)
             .setTitle(title)
             .setMessage(msg)
@@ -316,31 +396,43 @@ class AppVerificationManager(
             .setNegativeButton("退出") { _, _ -> activity.finish() }
             .setCancelable(false)
             .show()
+    }
 
-    /* ---------- 网络 & 工具 ---------- */
+    /* ---------- 工具方法 ---------- */
     private fun makeHttpRequest(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
         conn.connectTimeout = 15000
         conn.readTimeout = 15000
         conn.setRequestProperty("User-Agent", "Lumina Android Client")
+        conn.connect()
         if (conn.responseCode != 200) throw IOException("HTTP ${conn.responseCode}")
         return conn.inputStream.bufferedReader().use { it.readText() }
     }
 
     private fun parseIniStatus(s: String) = s.contains("status=true", ignoreCase = true)
 
-    private fun getSHA256Hash(input: String): String =
-        MessageDigest.getInstance("SHA-256")
-            .digest(input.toByteArray())
-            .joinToString("") { "%02x".format(it) }
+    private fun getSHA256Hash(input: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
+        val hexChars = "0123456789ABCDEF".toCharArray()
+        val hex = CharArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xFF
+            hex[i * 2] = hexChars[v ushr 4]
+            hex[i * 2 + 1] = hexChars[v and 0x0F]
+        }
+        return String(hex)
+    }
 
     @Suppress("DEPRECATION")
-    private fun getLocalVersionCode(): Long =
-        activity.packageManager.getPackageInfo(activity.packageName, 0).let {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) it.longVersionCode
-            else it.versionCode.toLong()
+    private fun getLocalVersionCode(): Long {
+        val packageInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            packageInfo.longVersionCode
+        } else {
+            packageInfo.versionCode.toLong()
         }
+    }
 
     fun onDestroy() {
         executor.shutdownNow()
