@@ -10,7 +10,6 @@
         <!-- 导航栏颜色 -->
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- 对话框主题 -->
-        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
         <!-- 适配Compose -->
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowLightNavigationBar">true</item>
@@ -22,19 +21,6 @@
         <!-- Customize your theme here, e.g., colors, fonts, etc. -->
           <item name="windowActionBar">false</item>
           <item name="windowNoTitle">true</item>
-    </style>
-    <!-- 夜间模式适配 -->
-    <style name="ThemeOverlay.Material3.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <!-- 夜间模式文字颜色 -->
-        <item name="android:textColor">?android:attr/textColorPrimary</item>
-        <!-- 按钮颜色 -->
-        <item name="buttonBarPositiveButtonStyle">@style/AlertDialogButton</item>
-        <item name="buttonBarNegativeButtonStyle">@style/AlertDialogButton</item>
-    </style>
-
-    <!-- 对话框按钮样式 -->
-    <style name="AlertDialogButton" parent="Widget.Material3.Button.TextButton">
-        <item name="android:textColor">?attr/colorPrimary</item>
     </style>
 
 </resources>
