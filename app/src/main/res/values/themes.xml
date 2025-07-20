@@ -18,7 +18,7 @@
     </style>
 
     <!-- Phoenix主题 - 动态色彩 + 对话框兼容 -->
-    <style name="Theme.Phoenix" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="Theme.Phoenix" parent="Theme.Material3.DynamicColors.DayNight">
         <!-- Customize your theme here, e.g., colors, fonts, etc. -->
           <item name="windowActionBar">false</item>
           <item name="windowNoTitle">true</item>
