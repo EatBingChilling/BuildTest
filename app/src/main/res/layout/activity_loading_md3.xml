@@ -5,61 +5,66 @@
     android:layout_height="match_parent"
     android:orientation="horizontal">
 
-    <!-- 左侧内容区 -->
-    <LinearLayout
-        android:id="@+id/left_panel"
+    <!-- 左侧：可滚动内容区域 -->
+    <ScrollView
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:padding="16dp">
+        android:fillViewport="true">
 
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-            android:id="@+id/progress_indicator"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:indicatorColor="?attr/colorPrimary"
-            app:trackColor="?attr/colorOutlineVariant"
-            app:trackThickness="8dp" />
-
-        <TextView
-            android:id="@+id/status_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="正在进行应用验证，请稍候..."
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <!-- 公告 -->
         <LinearLayout
-            android:id="@+id/notice_container"
+            android:id="@+id/left_panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginTop="16dp" />
+            android:padding="16dp">
 
-        <!-- 隐私协议 -->
-        <LinearLayout
-            android:id="@+id/privacy_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginTop="16dp" />
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progress_indicator"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:indicatorColor="?attr/colorPrimary"
+                app:trackColor="?attr/colorOutlineVariant"
+                app:trackThickness="8dp" />
 
-        <!-- 更新信息 -->
-        <LinearLayout
-            android:id="@+id/update_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginTop="16dp" />
-    </LinearLayout>
+            <TextView
+                android:id="@+id/status_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="正在进行应用验证，请稍候..."
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <!-- 公告 -->
+            <LinearLayout
+                android:id="@+id/notice_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="16dp" />
+
+            <!-- 隐私协议 -->
+            <LinearLayout
+                android:id="@+id/privacy_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="16dp" />
+
+            <!-- 更新信息 -->
+            <LinearLayout
+                android:id="@+id/update_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="16dp" />
+        </LinearLayout>
+    </ScrollView>
 
     <!-- 右侧步骤卡片（保持原样） -->
     <ScrollView
