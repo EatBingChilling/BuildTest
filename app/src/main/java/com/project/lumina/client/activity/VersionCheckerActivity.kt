@@ -1,19 +1,19 @@
 package com.project.lumina.client.activity
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.os.Build
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.project.lumina.client.R
@@ -24,57 +24,7 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.Executors
 
-class VersionCheckerActivity : AppCompatActivity() {
-
-    private lateinit var verificationManager: AppVerificationManager
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // 设置应用主题
-        setTheme(com.google.android.material.R.style.Theme_Material3_DynamicColors_DayNight)
-        super.onCreate(savedInstanceState)
-        
-        // 设置窗口边距处理
-        window.decorView.setOnApplyWindowInsetsListener { v, insets ->
-            v.setPadding(
-                insets.systemWindowInsetLeft,
-                insets.systemWindowInsetTop,
-                insets.systemWindowInsetRight,
-                insets.systemWindowInsetBottom
-            )
-            insets
-        }
-        
-        // 设置布局
-        setContentView(R.layout.activity_loading_md3)
-        
-        // 初始化验证管理器
-        verificationManager = AppVerificationManager(this) {
-            // 延迟后跳转到主界面
-            val handler = Handler(Looper.getMainLooper())
-            handler.postDelayed({
-                startActivity(Intent(this@VersionCheckerActivity, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                })
-                finish()
-            }, 666)
-        }
-        
-        // 开始验证流程
-        verificationManager.startVerification()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // 清理验证管理器
-        if (::verificationManager.isInitialized) {
-            verificationManager.onDestroy()
-        }
-    }
-}
-
-/* ------------------------------------------------------------------------ */
-
-class AppVerificationManager(
+class VersionCheckerActivity(
     private val activity: AppCompatActivity,
     private val onVerificationComplete: () -> Unit
 ) {
@@ -83,20 +33,14 @@ class AppVerificationManager(
         private const val PREFS_NAME = "app_verification_prefs"
         private const val KEY_NOTICE_HASH = "notice_content_hash"
         private const val KEY_PRIVACY_HASH = "privacy_content_hash"
-        private const val TAG = "AppVerificationManager"
     }
 
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
-    private val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    // UI控件引用
     private lateinit var progressIndicator: LinearProgressIndicator
     private lateinit var statusText: TextView
-    private lateinit var step1Card: MaterialCardView
-    private lateinit var step2Card: MaterialCardView
-    private lateinit var step3Card: MaterialCardView
-    private lateinit var step4Card: MaterialCardView
     private lateinit var step1Text: TextView
     private lateinit var step2Text: TextView
     private lateinit var step3Text: TextView
@@ -106,7 +50,10 @@ class AppVerificationManager(
     private lateinit var step3Progress: CircularProgressIndicator
     private lateinit var step4Progress: CircularProgressIndicator
 
-    // 步骤完成状态
+    private lateinit var noticeContainer: LinearLayout
+    private lateinit var privacyContainer: LinearLayout
+    private lateinit var updateContainer: LinearLayout
+
     private var step1Passed = false
     private var step2Passed = false
     private var step3Passed = false
@@ -120,19 +67,21 @@ class AppVerificationManager(
 
     private fun bindViews() {
         progressIndicator = activity.findViewById(R.id.progress_indicator)
-        statusText        = activity.findViewById(R.id.status_text)
-        step1Card         = activity.findViewById(R.id.step1_card)
-        step2Card         = activity.findViewById(R.id.step2_card)
-        step3Card         = activity.findViewById(R.id.step3_card)
-        step4Card         = activity.findViewById(R.id.step4_card)
-        step1Text         = activity.findViewById(R.id.step1_text)
-        step2Text         = activity.findViewById(R.id.step2_text)
-        step3Text         = activity.findViewById(R.id.step3_text)
-        step4Text         = activity.findViewById(R.id.step4_text)
-        step1Progress     = activity.findViewById(R.id.step1_progress)
-        step2Progress     = activity.findViewById(R.id.step2_progress)
-        step3Progress     = activity.findViewById(R.id.step3_progress)
-        step4Progress     = activity.findViewById(R.id.step4_progress)
+        statusText = activity.findViewById(R.id.status_text)
+
+        step1Text = activity.findViewById(R.id.step1_text)
+        step2Text = activity.findViewById(R.id.step2_text)
+        step3Text = activity.findViewById(R.id.step3_text)
+        step4Text = activity.findViewById(R.id.step4_text)
+
+        step1Progress = activity.findViewById(R.id.step1_progress)
+        step2Progress = activity.findViewById(R.id.step2_progress)
+        step3Progress = activity.findViewById(R.id.step3_progress)
+        step4Progress = activity.findViewById(R.id.step4_progress)
+
+        noticeContainer = activity.findViewById(R.id.notice_container)
+        privacyContainer = activity.findViewById(R.id.privacy_container)
+        updateContainer = activity.findViewById(R.id.update_container)
     }
 
     private fun initializeStepUI() {
@@ -146,40 +95,42 @@ class AppVerificationManager(
 
     private enum class StepStatus { WAITING, IN_PROGRESS, SUCCESS, ERROR }
 
-    private fun setStepStatus(step: Int, status: StepStatus, text: String) = handler.post {
-        val txt: TextView = when (step) {
+    private fun setStepStatus(step: Int, status: StepStatus, text: String) {
+        val txt = when (step) {
             1 -> step1Text
             2 -> step2Text
             3 -> step3Text
             4 -> step4Text
-            else -> return@post
+            else -> return
         }
-        val progress: CircularProgressIndicator = when (step) {
+        val progress = when (step) {
             1 -> step1Progress
             2 -> step2Progress
             3 -> step3Progress
             4 -> step4Progress
-            else -> return@post
+            else -> return
         }
 
-        txt.text = text
-        when (status) {
-            StepStatus.WAITING -> {
-                progress.visibility = View.GONE
-                txt.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-            }
-            StepStatus.IN_PROGRESS -> {
-                progress.visibility = View.VISIBLE
-                progress.isIndeterminate = true
-                txt.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
-            }
-            StepStatus.SUCCESS -> {
-                progress.visibility = View.GONE
-                txt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_check_circle_24, 0, 0, 0)
-            }
-            StepStatus.ERROR -> {
-                progress.visibility = View.GONE
-                txt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_error_24, 0, 0, 0)
+        handler.post {
+            txt.text = text
+            when (status) {
+                StepStatus.WAITING -> {
+                    progress.visibility = View.GONE
+                    txt.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                }
+                StepStatus.IN_PROGRESS -> {
+                    progress.visibility = View.VISIBLE
+                    progress.isIndeterminate = true
+                    txt.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+                }
+                StepStatus.SUCCESS -> {
+                    progress.visibility = View.GONE
+                    txt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_check_circle_24, 0, 0, 0)
+                }
+                StepStatus.ERROR -> {
+                    progress.visibility = View.GONE
+                    txt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_error_24, 0, 0, 0)
+                }
             }
         }
     }
@@ -192,12 +143,11 @@ class AppVerificationManager(
         }
     }
 
-    /* -------------- 四步验证流程 -------------- */
     private fun startStep1() {
         executor.execute {
             try {
                 val resp = makeHttpRequest("$BASE_URL/appstatus/a.ini")
-                handler.post {
+                handler.postDelayed({
                     if (parseIniStatus(resp)) {
                         step1Passed = true
                         setStepStatus(1, StepStatus.SUCCESS, "服务器连接成功")
@@ -205,14 +155,14 @@ class AppVerificationManager(
                         startStep2()
                     } else {
                         setStepStatus(1, StepStatus.ERROR, "应用状态验证失败")
-                        showRetryDialog("状态验证失败", "应用当前不可用，请联系开发者", ::startStep1)
+                        showRetryContent("状态验证失败", "应用当前不可用，请联系开发者", ::startStep1)
                     }
-                }
+                }, 1000)
             } catch (e: IOException) {
-                handler.post {
+                handler.postDelayed({
                     setStepStatus(1, StepStatus.ERROR, "网络连接失败")
-                    showRetryDialog("网络错误", "无法连接服务器，请检查网络", ::startStep1)
-                }
+                    showRetryContent("网络错误", "无法连接服务器，请检查网络", ::startStep1)
+                }, 1000)
             }
         }
     }
@@ -222,7 +172,7 @@ class AppVerificationManager(
         executor.execute {
             try {
                 val resp = makeHttpRequest("$BASE_URL/title/a.json")
-                handler.post {
+                handler.postDelayed({
                     try {
                         val json = JSONObject(resp)
                         val title = json.getString("title")
@@ -230,8 +180,7 @@ class AppVerificationManager(
                         val content = json.getString("content")
                         val hash = getSHA256Hash(resp)
                         if (prefs.getString(KEY_NOTICE_HASH, "") != hash) {
-                            setStepStatus(2, StepStatus.IN_PROGRESS, "请阅读新公告")
-                            showNoticeDialog(title, subtitle, content, hash)
+                            showNoticeContent(title, subtitle, content, hash)
                         } else {
                             step2Passed = true
                             setStepStatus(2, StepStatus.SUCCESS, "公告已读")
@@ -244,12 +193,14 @@ class AppVerificationManager(
                         updateProgress()
                         startStep3()
                     }
-                }
+                }, 1000)
             } catch (e: IOException) {
-                step2Passed = true
-                setStepStatus(2, StepStatus.ERROR, "获取公告失败，跳过")
-                updateProgress()
-                startStep3()
+                handler.postDelayed({
+                    step2Passed = true
+                    setStepStatus(2, StepStatus.ERROR, "获取公告失败，跳过")
+                    updateProgress()
+                    startStep3()
+                }, 1000)
             }
         }
     }
@@ -259,21 +210,22 @@ class AppVerificationManager(
         executor.execute {
             try {
                 val resp = makeHttpRequest("$BASE_URL/privary/a.txt")
-                handler.post {
+                handler.postDelayed({
                     val hash = getSHA256Hash(resp)
                     if (prefs.getString(KEY_PRIVACY_HASH, "") != hash) {
-                        setStepStatus(3, StepStatus.IN_PROGRESS, "请同意隐私协议")
-                        showPrivacyDialog(resp, hash)
+                        showPrivacyContent(resp, hash)
                     } else {
                         step3Passed = true
                         setStepStatus(3, StepStatus.SUCCESS, "隐私协议已同意")
                         updateProgress()
                         startStep4()
                     }
-                }
+                }, 1000)
             } catch (e: IOException) {
-                setStepStatus(3, StepStatus.ERROR, "获取协议失败")
-                showRetryDialog("隐私协议获取失败", "无法获取隐私协议，这是必需的步骤", ::startStep3)
+                handler.postDelayed({
+                    setStepStatus(3, StepStatus.ERROR, "获取协议失败")
+                    showRetryContent("隐私协议获取失败", "无法获取隐私协议，这是必需的步骤", ::startStep3)
+                }, 1000)
             }
         }
     }
@@ -283,14 +235,13 @@ class AppVerificationManager(
         executor.execute {
             try {
                 val resp = makeHttpRequest("$BASE_URL/update/a.json")
-                handler.post {
+                handler.postDelayed({
                     try {
                         val json = JSONObject(resp)
                         val cloud = json.getLong("version")
                         val local = getLocalVersionCode()
                         if (cloud > local) {
-                            setStepStatus(4, StepStatus.IN_PROGRESS, "发现新版本")
-                            showUpdateDialog(
+                            showUpdateContent(
                                 json.getString("name"),
                                 cloud.toString(),
                                 json.getString("update_content"),
@@ -309,96 +260,210 @@ class AppVerificationManager(
                         updateProgress()
                         checkAllStepsComplete()
                     }
-                }
+                }, 1000)
             } catch (e: IOException) {
-                step4Passed = true
-                setStepStatus(4, StepStatus.ERROR, "无法获取版本信息，跳过")
-                updateProgress()
-                checkAllStepsComplete()
+                handler.postDelayed({
+                    step4Passed = true
+                    setStepStatus(4, StepStatus.ERROR, "无法获取版本信息，跳过")
+                    updateProgress()
+                    checkAllStepsComplete()
+                }, 1000)
             }
         }
     }
 
     private fun checkAllStepsComplete() {
         if (step1Passed && step2Passed && step3Passed && step4Passed) {
-            // 修复点：使用对象表达式替代Lambda
-            handler.postDelayed(object : Runnable {
-                override fun run() {
-                    onVerificationComplete()
-                }
+            handler.postDelayed({
+                onVerificationComplete()
             }, 800)
         }
     }
 
-    /* ---------- 对话框工具 ---------- */
-    private fun showNoticeDialog(title: String, subtitle: String, content: String, hash: String) {
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(title)
-            .setMessage("$subtitle\n\n$content")
-            .setPositiveButton("我已阅读") { _, _ ->
-                prefs.edit().putString(KEY_NOTICE_HASH, hash).apply()
-                step2Passed = true
-                setStepStatus(2, StepStatus.SUCCESS, "公告已读")
-                updateProgress()
-                startStep3()
+    /* ---------- 左侧内容展示 ---------- */
+
+    private fun showNoticeContent(title: String, subtitle: String, content: String, hash: String) {
+        handler.post {
+            noticeContainer.removeAllViews()
+
+            val titleView = TextView(activity).apply {
+                text = title
+                textSize = 18f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorPrimary))
+                setPadding(0, 0, 0, 8)
             }
-            .setCancelable(false)
-            .show()
+            val subtitleView = TextView(activity).apply {
+                text = subtitle
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurfaceVariant))
+                setPadding(0, 0, 0, 8)
+            }
+            val contentView = TextView(activity).apply {
+                text = content
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurface))
+                setPadding(0, 0, 0, 16)
+            }
+            val agreeBtn = MaterialButton(activity).apply {
+                text = "我已阅读"
+                setOnClickListener {
+                    prefs.edit().putString(KEY_NOTICE_HASH, hash).apply()
+                    step2Passed = true
+                    setStepStatus(2, StepStatus.SUCCESS, "公告已读")
+                    updateProgress()
+                    animateOut(noticeContainer) { startStep3() }
+                }
+            }
+
+            noticeContainer.addView(titleView)
+            noticeContainer.addView(subtitleView)
+            noticeContainer.addView(contentView)
+            noticeContainer.addView(agreeBtn)
+
+            animateIn(noticeContainer)
+        }
     }
 
-    private fun showPrivacyDialog(content: String, hash: String) {
-        MaterialAlertDialogBuilder(activity)
-            .setTitle("隐私协议")
-            .setMessage(content)
-            .setPositiveButton("同意") { _, _ ->
-                prefs.edit().putString(KEY_PRIVACY_HASH, hash).apply()
-                step3Passed = true
-                setStepStatus(3, StepStatus.SUCCESS, "隐私协议已同意")
-                updateProgress()
-                startStep4()
+    private fun showPrivacyContent(content: String, hash: String) {
+        handler.post {
+            privacyContainer.removeAllViews()
+
+            val titleView = TextView(activity).apply {
+                text = "隐私协议"
+                textSize = 18f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorPrimary))
+                setPadding(0, 0, 0, 8)
             }
-            .setNegativeButton("拒绝") { _, _ ->
-                MaterialAlertDialogBuilder(activity)
-                    .setTitle("无法继续")
-                    .setMessage("必须同意隐私协议才能继续使用")
-                    .setPositiveButton("重新阅读") { _, _ -> showPrivacyDialog(content, hash) }
-                    .setNegativeButton("退出应用") { _, _ -> activity.finish() }
-                    .setCancelable(false)
-                    .show()
+            val contentView = TextView(activity).apply {
+                text = content
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurface))
+                setPadding(0, 0, 0, 16)
             }
-            .setCancelable(false)
-            .show()
+            val agreeBtn = MaterialButton(activity).apply {
+                text = "同意"
+                setOnClickListener {
+                    prefs.edit().putString(KEY_PRIVACY_HASH, hash).apply()
+                    step3Passed = true
+                    setStepStatus(3, StepStatus.SUCCESS, "隐私协议已同意")
+                    updateProgress()
+                    animateOut(privacyContainer) { startStep4() }
+                }
+            }
+            val rejectBtn = MaterialButton(activity).apply {
+                text = "拒绝"
+                setOnClickListener {
+                    activity.finish()
+                }
+            }
+
+            privacyContainer.addView(titleView)
+            privacyContainer.addView(contentView)
+            privacyContainer.addView(agreeBtn)
+            privacyContainer.addView(rejectBtn)
+
+            animateIn(privacyContainer)
+        }
     }
 
-    private fun showUpdateDialog(name: String, ver: String, content: String, local: Long, cloud: Long) {
-        MaterialAlertDialogBuilder(activity)
-            .setTitle("发现新版本")
-            .setMessage("$name v$ver\n\n当前版本: $local\n最新版本: $cloud\n\n更新内容：\n$content")
-            .setPositiveButton("立即更新") { _, _ ->
-                activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://110.42.63.51:39078/apps/apks")))
-                activity.finish()
+    private fun showUpdateContent(name: String, ver: String, content: String, local: Long, cloud: Long) {
+        handler.post {
+            updateContainer.removeAllViews()
+
+            val titleView = TextView(activity).apply {
+                text = "发现新版本"
+                textSize = 18f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorPrimary))
+                setPadding(0, 0, 0, 8)
             }
-            .setNegativeButton("跳过更新") { _, _ ->
-                step4Passed = true
-                setStepStatus(4, StepStatus.SUCCESS, "跳过更新")
-                updateProgress()
-                checkAllStepsComplete()
+            val infoView = TextView(activity).apply {
+                text = "$name v$ver\n当前版本: $local\n最新版本: $cloud"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurfaceVariant))
+                setPadding(0, 0, 0, 8)
             }
-            .setCancelable(false)
-            .show()
+            val contentView = TextView(activity).apply {
+                text = "更新内容：\n$content"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurface))
+                setPadding(0, 0, 0, 16)
+            }
+            val updateBtn = MaterialButton(activity).apply {
+                text = "立即更新"
+                setOnClickListener {
+                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("http://110.42.63.51:39078/apps/apks")))
+                    activity.finish()
+                }
+            }
+            val skipBtn = MaterialButton(activity).apply {
+                text = "跳过更新"
+                setOnClickListener {
+                    step4Passed = true
+                    setStepStatus(4, StepStatus.SUCCESS, "跳过更新")
+                    updateProgress()
+                    animateOut(updateContainer) { checkAllStepsComplete() }
+                }
+            }
+
+            updateContainer.addView(titleView)
+            updateContainer.addView(infoView)
+            updateContainer.addView(contentView)
+            updateContainer.addView(updateBtn)
+            updateContainer.addView(skipBtn)
+
+            animateIn(updateContainer)
+        }
     }
 
-    private fun showRetryDialog(title: String, msg: String, action: () -> Unit) {
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(title)
-            .setMessage(msg)
-            .setPositiveButton("重试") { _, _ -> action() }
-            .setNegativeButton("退出") { _, _ -> activity.finish() }
-            .setCancelable(false)
-            .show()
+    private fun showRetryContent(title: String, msg: String, action: () -> Unit) {
+        handler.post {
+            val container = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(32, 32, 32, 32)
+            }
+
+            val titleView = TextView(activity).apply {
+                text = title
+                textSize = 16f
+                setTextColor(ContextCompat.getColor(activity, R.color.colorError))
+            }
+            val msgView = TextView(activity).apply {
+                text = msg
+                textSize = 14f
+                setPadding(0, 8, 0, 16)
+            }
+            val retryBtn = MaterialButton(activity).apply {
+                text = "重试"
+                setOnClickListener { action() }
+            }
+            val exitBtn = MaterialButton(activity).apply {
+                text = "退出"
+                setOnClickListener { activity.finish() }
+            }
+
+            container.addView(titleView)
+            container.addView(msgView)
+            container.addView(retryBtn)
+            container.addView(exitBtn)
+
+            activity.findViewById<LinearLayout>(R.id.left_panel).addView(container)
+            animateIn(container)
+        }
     }
 
-    /* ---------- 工具方法 ---------- */
+    private fun animateIn(view: View) {
+        view.alpha = 0f
+        view.visibility = View.VISIBLE
+        view.animate().alpha(1f).setDuration(400).start()
+    }
+
+    private fun animateOut(view: View, onEnd: () -> Unit) {
+        view.animate().alpha(0f).setDuration(300).withEndAction {
+            view.visibility = View.GONE
+            onEnd()
+        }.start()
+    }
+
     private fun makeHttpRequest(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
@@ -414,20 +479,13 @@ class AppVerificationManager(
 
     private fun getSHA256Hash(input: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray())
-        val hexChars = "0123456789ABCDEF".toCharArray()
-        val hex = CharArray(bytes.size * 2)
-        for (i in bytes.indices) {
-            val v = bytes[i].toInt() and 0xFF
-            hex[i * 2] = hexChars[v ushr 4]
-            hex[i * 2 + 1] = hexChars[v and 0x0F]
-        }
-        return String(hex)
+        return bytes.joinToString("") { "%02X".format(it) }
     }
 
     @Suppress("DEPRECATION")
     private fun getLocalVersionCode(): Long {
         val packageInfo = activity.packageManager.getPackageInfo(activity.packageName, 0)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
             packageInfo.longVersionCode
         } else {
             packageInfo.versionCode.toLong()

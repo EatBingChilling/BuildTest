@@ -5,14 +5,15 @@
     android:layout_height="match_parent"
     android:orientation="horizontal">
 
-    <!-- 左侧 -->
+    <!-- 左侧内容区 -->
     <LinearLayout
+        android:id="@+id/left_panel"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="center"
         android:orientation="vertical"
-        android:paddingEnd="16dp">
+        android:gravity="center_horizontal"
+        android:padding="16dp">
 
         <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/progress_indicator"
@@ -32,18 +33,35 @@
             android:textAppearance="?attr/textAppearanceBodyLarge"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
-        <TextView
+        <!-- 公告 -->
+        <LinearLayout
+            android:id="@+id/notice_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:gravity="center"
-            android:text="所有验证步骤必须通过才能使用应用"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textStyle="italic" />
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="16dp" />
+
+        <!-- 隐私协议 -->
+        <LinearLayout
+            android:id="@+id/privacy_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="16dp" />
+
+        <!-- 更新信息 -->
+        <LinearLayout
+            android:id="@+id/update_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="16dp" />
     </LinearLayout>
 
-    <!-- 右侧 -->
+    <!-- 右侧步骤卡片（保持原样） -->
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="match_parent"
@@ -55,15 +73,14 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- 步骤 1 -->
+            <!-- step1_card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/step1_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -86,20 +103,18 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="步骤 1: 正在连接服务器..."
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:text="步骤 1: 正在连接服务器..." />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 步骤 2 -->
+            <!-- step2_card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/step2_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -122,20 +137,18 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="步骤 2: 等待公告传回"
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:text="步骤 2: 等待公告传回" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 步骤 3 -->
+            <!-- step3_card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/step3_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -158,20 +171,18 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="步骤 3: 等待隐私协议传回"
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:text="步骤 3: 等待隐私协议传回" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 步骤 4 -->
+            <!-- step4_card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/step4_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp">
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -194,8 +205,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="步骤 4: 检查版本信息"
-                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                        android:text="步骤 4: 检查版本信息" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
