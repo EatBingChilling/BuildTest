@@ -12,7 +12,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.project.lumina.client.R
-import com.google.android.material.R
 
 class VersionCheckerActivity : AppCompatActivity() {
 
