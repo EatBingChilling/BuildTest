@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -289,19 +290,19 @@ class AppVerificationManager(
             val titleView = TextView(activity).apply {
                 text = title
                 textSize = 18f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorPrimary))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorPrimary))
                 setPadding(0, 0, 0, 8)
             }
             val subtitleView = TextView(activity).apply {
                 text = subtitle
                 textSize = 14f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurfaceVariant))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(0, 0, 0, 8)
             }
             val contentView = TextView(activity).apply {
                 text = content
                 textSize = 14f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurface))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                 setPadding(0, 0, 0, 16)
             }
             val agreeBtn = MaterialButton(activity).apply {
@@ -331,13 +332,13 @@ class AppVerificationManager(
             val titleView = TextView(activity).apply {
                 text = "隐私协议"
                 textSize = 18f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorPrimary))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorPrimary))
                 setPadding(0, 0, 0, 8)
             }
             val contentView = TextView(activity).apply {
                 text = content
                 textSize = 14f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurface))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                 setPadding(0, 0, 0, 16)
             }
             val agreeBtn = MaterialButton(activity).apply {
@@ -352,9 +353,7 @@ class AppVerificationManager(
             }
             val rejectBtn = MaterialButton(activity).apply {
                 text = "拒绝"
-                setOnClickListener {
-                    activity.finish()
-                }
+                setOnClickListener { activity.finish() }
             }
 
             privacyContainer.addView(titleView)
@@ -373,19 +372,19 @@ class AppVerificationManager(
             val titleView = TextView(activity).apply {
                 text = "发现新版本"
                 textSize = 18f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorPrimary))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorPrimary))
                 setPadding(0, 0, 0, 8)
             }
             val infoView = TextView(activity).apply {
                 text = "$name v$ver\n当前版本: $local\n最新版本: $cloud"
                 textSize = 14f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurfaceVariant))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(0, 0, 0, 8)
             }
             val contentView = TextView(activity).apply {
                 text = "更新内容：\n$content"
                 textSize = 14f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorOnSurface))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                 setPadding(0, 0, 0, 16)
             }
             val updateBtn = MaterialButton(activity).apply {
@@ -425,7 +424,7 @@ class AppVerificationManager(
             val titleView = TextView(activity).apply {
                 text = title
                 textSize = 16f
-                setTextColor(ContextCompat.getColor(activity, R.color.colorError))
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorError))
             }
             val msgView = TextView(activity).apply {
                 text = msg
@@ -451,6 +450,8 @@ class AppVerificationManager(
         }
     }
 
+    /* ---------- 动画 ---------- */
+
     private fun animateIn(view: View) {
         view.alpha = 0f
         view.visibility = View.VISIBLE
@@ -463,6 +464,8 @@ class AppVerificationManager(
             onEnd()
         }.start()
     }
+
+    /* ---------- 工具 ---------- */
 
     private fun makeHttpRequest(url: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
@@ -490,6 +493,14 @@ class AppVerificationManager(
         } else {
             packageInfo.versionCode.toLong()
         }
+    }
+
+    /* ---------- 主题颜色解析工具 ---------- */
+
+    private fun resolveColor(attr: Int): Int {
+        val typedValue = TypedValue()
+        activity.theme.resolveAttribute(attr, typedValue, true)
+        return ContextCompat.getColor(activity, typedValue.resourceId)
     }
 
     fun onDestroy() {
