@@ -159,18 +159,24 @@ class MiniMapOverlay : OverlayWindow() {
         val radius = rawRadius * minimapZoom
         val scale = 2f * minimapZoom
 
+        // 在@Composable函数内部获取所有颜色
+        val bgColor = Mbg()
+        val gridColor = MgridColor()
+        val crosshairColor = MCrosshair()
+        val playerMarkerColor = MPlayerMarker()
+        val entityCloseColor = MEntityClose()
+        val entityFarColor = MEntityFar()
+
         Box(
             modifier = Modifier
                 .size(dpSize)
-                .background(Mbg(), shape = RoundedCornerShape(16.dp)),
+                .background(bgColor, shape = RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.size(dpSize)) {
                 val centerX = this.size.width / 2
                 val centerY = this.size.height / 2
 
-
-                val gridColor = MgridColor()
                 val gridSpacing = this.size.width / 10
                 for (i in 1 until 10) {
                     val x = i * gridSpacing
@@ -178,21 +184,16 @@ class MiniMapOverlay : OverlayWindow() {
                     drawLine(gridColor, Offset(0f, x), Offset(this.size.width, x), strokeWidth = 1f)
                 }
 
-
-                drawLine(MCrosshair(), Offset(centerX, 0f), Offset(centerX, this.size.height), strokeWidth = 1.5f)
-                drawLine(MCrosshair(), Offset(0f, centerY), Offset(this.size.width, centerY), strokeWidth = 1.5f)
-
+                drawLine(crosshairColor, Offset(centerX, 0f), Offset(centerX, this.size.height), strokeWidth = 1.5f)
+                drawLine(crosshairColor, Offset(0f, centerY), Offset(this.size.width, centerY), strokeWidth = 1.5f)
 
                 val playerDotRadius = minimapDotSize * minimapZoom
-                drawCircle(MPlayerMarker(), radius = playerDotRadius, center = Offset(centerX, centerY))
-
-
+                drawCircle(playerMarkerColor, radius = playerDotRadius, center = Offset(centerX, centerY))
 
                 val northAngle = -rotation
                 val northDistance = rawRadius * 0.95f
                 val northX = centerX + northDistance * sin(northAngle)
                 val northY = centerY - northDistance * cos(northAngle)
-
 
                 val paint = android.graphics.Paint().apply {
                     color = android.graphics.Color.BLUE
@@ -202,18 +203,13 @@ class MiniMapOverlay : OverlayWindow() {
                     isAntiAlias = true
                 }
 
-
                 drawContext.canvas.nativeCanvas.drawText("^", northX, northY - paint.textSize * 0.6f, paint)
                 drawContext.canvas.nativeCanvas.drawText("N", northX, northY + paint.textSize * 0.4f, paint)
-
-
-
 
                 targets.forEach { target ->
                     val relX = target.x - center.x
                     val relY = target.y - center.y
                     val distance = sqrt(relX * relX + relY * relY) * scale
-
 
                     val dotRadius = minimapDotSize * minimapZoom
 
@@ -223,7 +219,7 @@ class MiniMapOverlay : OverlayWindow() {
                     val entityY = centerY - clampedDistance * cos(angle)
 
                     drawCircle(
-                        color = if (distance < radius * 0.9f) MEntityClose() else MEntityFar(),
+                        color = if (distance < radius * 0.9f) entityCloseColor else entityFarColor,
                         radius = dotRadius,
                         center = Offset(entityX, entityY)
                     )
