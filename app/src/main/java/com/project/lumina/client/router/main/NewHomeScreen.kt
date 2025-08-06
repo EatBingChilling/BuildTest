@@ -26,7 +26,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material3.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
