@@ -25,8 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.material3.icons.Icons
-import androidx.compose.material3.icons.filled.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,9 +89,13 @@ fun NewHomeScreen(
     var currentPackName by remember { mutableStateOf("") }
 
     // 关于页内容
-    val aboutContent = "LuminaCN
+    val aboutContent = """LuminaCN
 
-开源项目，基于Material3 Compose重构。\n\n作者: Phoen1x\n\n项目地址: https://github.com/你的仓库"
+开源项目，基于Material3 Compose重构。
+
+作者: Phoen1x
+
+项目地址: https://github.com/你的仓库"""
 
     // 验证流程（Material3风格，网络失败自动跳过）
     LaunchedEffect(Unit) {
