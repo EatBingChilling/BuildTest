@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.sp
 import com.project.lumina.client.R
 import com.project.lumina.client.application.AppContext
 
-// 恢复原来的配色变量
+
+
 val primary = AppContext.themeManager.primary
 val BackgroundColor = AppContext.themeManager.background
 val SurfaceColor = AppContext.themeManager.surface
@@ -24,6 +25,7 @@ val TheBackgroundColorForOverlayUi2 = AppContext.themeManager.backgroundOverlayU
 val TheNotBackgroundColorForOverlayUi = AppContext.themeManager.notBackgroundOverlayUi
 val TextColorForModules = AppContext.themeManager.textModules
 
+
 val LauncherRadialColor = AppContext.themeManager.launcherRadial
 val LAnimationColor = AppContext.themeManager.lAnimation
 val LTextColor = AppContext.themeManager.lText
@@ -31,6 +33,7 @@ val LBlobColor1 = AppContext.themeManager.lBlob1
 val LBlobColor2 = AppContext.themeManager.lBlob2
 val LBg1 = AppContext.themeManager.lBg1
 val LBg2 = AppContext.themeManager.lBg2
+
 
 val Mbg = AppContext.themeManager.mBg
 val MgridColor = AppContext.themeManager.mGrid
@@ -40,32 +43,39 @@ val MNorth = AppContext.themeManager.mNorth
 val MEntityClose = AppContext.themeManager.mEntityClose
 val MEntityFar = AppContext.themeManager.mEntityFar
 
+
 val OArrayList1 = AppContext.themeManager.oArrayList1
 val OArrayList2 = AppContext.themeManager.oArrayList2
 val OArrayBase = AppContext.themeManager.oArrayBase
+
 
 val ONotifAccent = AppContext.themeManager.oNotifAccent
 val ONotifBase = AppContext.themeManager.oNotifBase
 val ONotifText = AppContext.themeManager.oNotifText
 val ONotifProgressbar = AppContext.themeManager.oNotifProgressbar
 
+
 val PColorGradient1 = AppContext.themeManager.pColorGradient1
 val PColorGradient2 = AppContext.themeManager.pColorGradient2
 val PBackground = AppContext.themeManager.pBackground
+
 
 val SBaseColor = AppContext.themeManager.sBase
 val SAccentColor = AppContext.themeManager.sAccent
 val SBAckgroundGradient1 = AppContext.themeManager.sBackgroundGradient1
 val SBAckgroundGradient2 = AppContext.themeManager.sBackgroundGradient2
 
+
 val SMiniLineGrpah = AppContext.themeManager.sMiniLineGraph
 val SMeterBg = AppContext.themeManager.sMeterBg
 val SMeterAccent = AppContext.themeManager.sMeterAccent
 val SMeterBase = AppContext.themeManager.sMeterBase
 
+
 val TCOGradient1 = AppContext.themeManager.tcoGradient1
 val TCOGradient2 = AppContext.themeManager.tcoGradient2
 val TCOBackground = AppContext.themeManager.tcoBackground
+
 
 val EColorCard1 = AppContext.themeManager.eColorCard1
 val EColorCard2 = AppContext.themeManager.eColorCard2
@@ -84,6 +94,9 @@ val NColorItem6 = AppContext.themeManager.nColorItem6
 val NColorItem7 = AppContext.themeManager.nColorItem7
 val PColorItem1 = AppContext.themeManager.pColorItem1
 
+
+
+
 val EnabledBackgroundColor = AppContext.themeManager.enabledBackground
 val DisabledBackgroundColor = AppContext.themeManager.disabledBackground
 val EnabledGlowColor = AppContext.themeManager.enabledGlow
@@ -91,15 +104,15 @@ val EnabledTextColor = AppContext.themeManager.enabledText
 val DisabledTextColor = AppContext.themeManager.disabledText
 val EnabledIconColor = AppContext.themeManager.enabledIcon
 val DisabledIconColor = AppContext.themeManager.disabledIcon
-val ProgressIndicatorColor = AppContext.themeManager.progressIndicator
-val SliderTrackColor = AppContext.themeManager.sliderTrack
+ val ProgressIndicatorColor = AppContext.themeManager.progressIndicator
+ val SliderTrackColor = AppContext.themeManager.sliderTrack
 val SliderActiveTrackColor = AppContext.themeManager.sliderActiveTrack
 val SliderThumbColor = AppContext.themeManager.sliderThumb
-val CheckboxUncheckedColor = AppContext.themeManager.checkboxUnchecked
-val CheckboxCheckedColor = AppContext.themeManager.checkboxChecked
-val CheckboxCheckmarkColor = AppContext.themeManager.checkboxCheckmark
-val ChoiceSelectedColor = AppContext.themeManager.choiceSelected
-val ChoiceUnselectedColor = AppContext.themeManager.choiceUnselected
+ val CheckboxUncheckedColor = AppContext.themeManager.checkboxUnchecked
+ val CheckboxCheckedColor = AppContext.themeManager.checkboxChecked
+ val CheckboxCheckmarkColor = AppContext.themeManager.checkboxCheckmark
+ val ChoiceSelectedColor = AppContext.themeManager.choiceSelected
+ val ChoiceUnselectedColor = AppContext.themeManager.choiceUnselected
 
 //KitsuGui
 val KitsuPrimary = AppContext.themeManager.kitsuPrimary
@@ -114,6 +127,7 @@ val KitsuUnselected = AppContext.themeManager.kitsuUnselected
 val KitsuHover = AppContext.themeManager.kitsuHover
 
 //Keystrokes Overlay
+
 val baseColor = AppContext.themeManager.baseColor
 val borderColor = AppContext.themeManager.borderColor
 val pressedColor = AppContext.themeManager.pressedColor
@@ -140,7 +154,6 @@ val MyTypography = Typography(
     labelMedium = TextStyle(fontFamily = MyFontFamily, fontSize = 12.sp),
     labelSmall = TextStyle(fontFamily = MyFontFamily, fontSize = 11.sp),
 )
-
 @Composable
 fun LuminaClientTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -152,8 +165,8 @@ fun LuminaClientTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> darkColorScheme()
-        else -> lightColorScheme()
+        darkTheme -> AppContext.themeManager.getMaterialColorScheme("dark")
+        else -> AppContext.themeManager.getMaterialColorScheme("dark")
     }
 
     MaterialTheme(
