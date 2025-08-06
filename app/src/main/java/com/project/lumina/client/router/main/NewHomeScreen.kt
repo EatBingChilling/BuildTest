@@ -70,6 +70,70 @@ import java.net.URL
 import java.security.MessageDigest
 import com.project.lumina.client.activity.AppVerificationManager
 
+// NewHomeScreen专用的Material3配色方案
+@Composable
+fun getNewHomeMaterial3Colors(): NewHomeMaterial3Colors {
+    val colorScheme = MaterialTheme.colorScheme
+    return NewHomeMaterial3Colors(
+        primary = colorScheme.primary,
+        onPrimary = colorScheme.onPrimary,
+        secondary = colorScheme.secondary,
+        onSecondary = colorScheme.onSecondary,
+        tertiary = colorScheme.tertiary,
+        onTertiary = colorScheme.onTertiary,
+        background = colorScheme.background,
+        onBackground = colorScheme.onBackground,
+        surface = colorScheme.surface,
+        onSurface = colorScheme.onSurface,
+        surfaceVariant = colorScheme.surfaceVariant,
+        onSurfaceVariant = colorScheme.onSurfaceVariant,
+        error = colorScheme.error,
+        onError = colorScheme.onError,
+        primaryContainer = colorScheme.primaryContainer,
+        onPrimaryContainer = colorScheme.onPrimaryContainer,
+        secondaryContainer = colorScheme.secondaryContainer,
+        onSecondaryContainer = colorScheme.onSecondaryContainer,
+        tertiaryContainer = colorScheme.tertiaryContainer,
+        onTertiaryContainer = colorScheme.onTertiaryContainer,
+        outline = colorScheme.outline,
+        outlineVariant = colorScheme.outlineVariant,
+        scrim = colorScheme.scrim,
+        inverseSurface = colorScheme.inverseSurface,
+        inverseOnSurface = colorScheme.inverseOnSurface,
+        inversePrimary = colorScheme.inversePrimary
+    )
+}
+
+// NewHomeScreen专用的Material3配色数据类
+data class NewHomeMaterial3Colors(
+    val primary: Color,
+    val onPrimary: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+    val tertiary: Color,
+    val onTertiary: Color,
+    val background: Color,
+    val onBackground: Color,
+    val surface: Color,
+    val onSurface: Color,
+    val surfaceVariant: Color,
+    val onSurfaceVariant: Color,
+    val error: Color,
+    val onError: Color,
+    val primaryContainer: Color,
+    val onPrimaryContainer: Color,
+    val secondaryContainer: Color,
+    val onSecondaryContainer: Color,
+    val tertiaryContainer: Color,
+    val onTertiaryContainer: Color,
+    val outline: Color,
+    val outlineVariant: Color,
+    val scrim: Color,
+    val inverseSurface: Color,
+    val inverseOnSurface: Color,
+    val inversePrimary: Color
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewHomeScreen(
@@ -79,6 +143,9 @@ fun NewHomeScreen(
     val scope = rememberCoroutineScope()
     val mainScreenViewModel: MainScreenViewModel = viewModel()
     val captureModeModel by mainScreenViewModel.captureModeModel.collectAsState()
+
+    // 获取NewHomeScreen专用的Material3配色
+    val colors = getNewHomeMaterial3Colors()
 
     // 验证相关状态
     var isVerifying by remember { mutableStateOf(true) }
@@ -140,24 +207,42 @@ fun NewHomeScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = colors.surface,
+                contentColor = colors.onSurface
+            ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     icon = { Icon(Icons.Filled.Dashboard, contentDescription = "主仪表盘") },
-                    label = { Text("主仪表盘") }
+                    label = { Text("主仪表盘") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = colors.primary,
+                        selectedTextColor = colors.primary,
+                        indicatorColor = colors.primaryContainer
+                    )
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = { Icon(Icons.Filled.Link, contentDescription = "远程连接") },
-                    label = { Text("远程连接") }
+                    label = { Text("远程连接") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = colors.primary,
+                        selectedTextColor = colors.primary,
+                        indicatorColor = colors.primaryContainer
+                    )
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Filled.Info, contentDescription = "关于") },
-                    label = { Text("关于") }
+                    label = { Text("关于") },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = colors.primary,
+                        selectedTextColor = colors.primary,
+                        indicatorColor = colors.primaryContainer
+                    )
                 )
             }
         },
@@ -165,8 +250,8 @@ fun NewHomeScreen(
             if (selectedTab == 0) {
                 FloatingActionButton(
                     onClick = onStartToggle,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
                 ) {
                     Icon(
                         imageVector = if (isLaunchingMinecraft) Icons.Filled.Stop else Icons.Filled.PlayArrow,
@@ -184,10 +269,11 @@ fun NewHomeScreen(
                     isLaunchingMinecraft = isLaunchingMinecraft,
                     showProgressDialog = showProgressDialog,
                     downloadProgress = downloadProgress,
-                    currentPackName = currentPackName
+                    currentPackName = currentPackName,
+                    colors = colors
                 )
-                1 -> RemoteLinkPage()
-                2 -> AboutPage(aboutContent)
+                1 -> RemoteLinkPage(colors = colors)
+                2 -> AboutPage(aboutContent, colors = colors)
             }
             if (showZeqaBottomSheet) {
                 ZeqaSubServerBottomSheet(
@@ -203,7 +289,7 @@ fun NewHomeScreen(
             if (isVerifying) {
                 // Material3风格的验证遮罩
                 Surface(
-                    color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                    color = colors.background.copy(alpha = 0.95f),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Column(
@@ -219,21 +305,21 @@ fun NewHomeScreen(
                             LinearProgressIndicator(
                                 progress = { verificationProgress },
                                 modifier = Modifier.width(200.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                color = colors.primary,
+                                trackColor = colors.surfaceVariant
                             )
                             
                             Text(
                                 text = verificationMessage,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = colors.onSurface
                             )
                             
                             if (verificationError != null) {
                                 Text(
                                     text = verificationError!!,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
+                                    color = colors.error
                                 )
                             }
                         }
@@ -248,25 +334,29 @@ fun NewHomeScreen(
                                 step = 1,
                                 title = "连接服务器",
                                 isCompleted = verificationStep >= 1,
-                                isCurrent = verificationStep == 1
+                                isCurrent = verificationStep == 1,
+                                colors = colors
                             )
                             VerificationStep(
                                 step = 2,
                                 title = "获取公告",
                                 isCompleted = verificationStep >= 2,
-                                isCurrent = verificationStep == 2
+                                isCurrent = verificationStep == 2,
+                                colors = colors
                             )
                             VerificationStep(
                                 step = 3,
                                 title = "隐私协议",
                                 isCompleted = verificationStep >= 3,
-                                isCurrent = verificationStep == 3
+                                isCurrent = verificationStep == 3,
+                                colors = colors
                             )
                             VerificationStep(
                                 step = 4,
                                 title = "版本检查",
                                 isCompleted = verificationStep >= 4,
-                                isCurrent = verificationStep == 4
+                                isCurrent = verificationStep == 4,
+                                colors = colors
                             )
                         }
                     }
@@ -281,7 +371,8 @@ fun VerificationStep(
     step: Int,
     title: String,
     isCompleted: Boolean,
-    isCurrent: Boolean
+    isCurrent: Boolean,
+    colors: NewHomeMaterial3Colors
 ) {
     Row(
         modifier = Modifier
@@ -296,9 +387,9 @@ fun VerificationStep(
                 .size(24.dp)
                 .background(
                     color = when {
-                        isCompleted -> MaterialTheme.colorScheme.primary
-                        isCurrent -> MaterialTheme.colorScheme.primaryContainer
-                        else -> MaterialTheme.colorScheme.surfaceVariant
+                        isCompleted -> colors.primary
+                        isCurrent -> colors.primaryContainer
+                        else -> colors.surfaceVariant
                     },
                     shape = CircleShape
                 ),
@@ -308,15 +399,15 @@ fun VerificationStep(
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary,
+                    tint = colors.onPrimary,
                     modifier = Modifier.size(16.dp)
                 )
             } else {
                 Text(
                     text = step.toString(),
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer 
-                           else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isCurrent) colors.onPrimaryContainer 
+                           else colors.onSurfaceVariant
                 )
             }
         }
@@ -325,9 +416,9 @@ fun VerificationStep(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
             color = when {
-                isCompleted -> MaterialTheme.colorScheme.primary
-                isCurrent -> MaterialTheme.colorScheme.onSurface
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                isCompleted -> colors.primary
+                isCurrent -> colors.onSurface
+                else -> colors.onSurfaceVariant
             }
         )
     }
@@ -340,7 +431,8 @@ fun MainDashboard(
     isLaunchingMinecraft: Boolean,
     showProgressDialog: Boolean,
     downloadProgress: Float,
-    currentPackName: String
+    currentPackName: String,
+    colors: NewHomeMaterial3Colors
 ) {
     // 这里写主仪表盘内容，全部用Material3控件
     Column(
@@ -349,10 +441,17 @@ fun MainDashboard(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("欢迎使用 LuminaCN!", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "欢迎使用 LuminaCN!", 
+            style = MaterialTheme.typography.headlineMedium,
+            color = colors.onSurface
+        )
         Button(
             onClick = onShowZeqaBottomSheet,
-            colors = ButtonDefaults.buttonColors()
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.primary,
+                contentColor = colors.onPrimary
+            )
         ) {
             Icon(Icons.Filled.Cloud, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -361,23 +460,32 @@ fun MainDashboard(
         if (showProgressDialog) {
             AlertDialog(
                 onDismissRequest = {},
-                title = { Text("正在下载: $currentPackName") },
+                title = { Text("正在下载: $currentPackName", color = colors.onSurface) },
                 text = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(progress = { downloadProgress })
+                        CircularProgressIndicator(
+                            progress = { downloadProgress },
+                            color = colors.primary
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("${(downloadProgress * 100).toInt()}%")
-                        Text(if (downloadProgress < 1f) "正在下载..." else "正在启动 Minecraft ...")
+                        Text("${(downloadProgress * 100).toInt()}%", color = colors.onSurface)
+                        Text(
+                            if (downloadProgress < 1f) "正在下载..." else "正在启动 Minecraft ...",
+                            color = colors.onSurfaceVariant
+                        )
                     }
                 },
-                confirmButton = {}
+                confirmButton = {},
+                containerColor = colors.surface,
+                titleContentColor = colors.onSurface,
+                textContentColor = colors.onSurface
             )
         }
     }
 }
 
 @Composable
-fun RemoteLinkPage() {
+fun RemoteLinkPage(colors: NewHomeMaterial3Colors) {
     // 远程连接页内容，Material3风格
     Column(
         modifier = Modifier
@@ -386,14 +494,23 @@ fun RemoteLinkPage() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Filled.Link, contentDescription = null, modifier = Modifier.size(64.dp))
+        Icon(
+            Icons.Filled.Link, 
+            contentDescription = null, 
+            modifier = Modifier.size(64.dp),
+            tint = colors.primary
+        )
         Spacer(modifier = Modifier.height(16.dp))
-        Text("远程连接功能开发中…", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "远程连接功能开发中…", 
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.onSurface
+        )
     }
 }
 
 @Composable
-fun AboutPage(content: String) {
+fun AboutPage(content: String, colors: NewHomeMaterial3Colors) {
     // 关于页内容，Material3风格
     Column(
         modifier = Modifier
@@ -402,9 +519,19 @@ fun AboutPage(content: String) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Filled.Info, contentDescription = null, modifier = Modifier.size(64.dp))
+        Icon(
+            Icons.Filled.Info, 
+            contentDescription = null, 
+            modifier = Modifier.size(64.dp),
+            tint = colors.primary
+        )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(content, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        Text(
+            content, 
+            style = MaterialTheme.typography.bodyLarge, 
+            textAlign = TextAlign.Center,
+            color = colors.onSurface
+        )
     }
 }
 
