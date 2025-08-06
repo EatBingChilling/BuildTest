@@ -544,7 +544,7 @@ fun NewHomeScreen(
     if (showZeqaBottomSheet) {
         ZeqaSubServerBottomSheet(
             onDismiss = { showZeqaBottomSheet = false },
-            onSelect = { subServer ->
+            onSelect = { subServer: SubServerInfo ->
                 mainScreenViewModel.selectCaptureModeModel(
                     captureModeModel.copy(serverHostName = subServer.serverAddress, serverPort = subServer.serverPort)
                 )

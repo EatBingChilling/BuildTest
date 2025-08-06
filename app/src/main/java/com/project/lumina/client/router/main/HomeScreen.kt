@@ -977,7 +977,7 @@ fun HomeScreen(
     if (showZeqaBottomSheet) {
         ZeqaSubServerBottomSheet(
             onDismiss = { showZeqaBottomSheet = false },
-            onSelect = { subServer ->
+            onSelect = { subServer: SubServerInfo ->
                 mainScreenViewModel.selectCaptureModeModel(
                     captureModeModel.copy(serverHostName = subServer.serverAddress, serverPort = subServer.serverPort)
                 )
@@ -987,144 +987,7 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ZeqaSubServerBottomSheet(
-    onDismiss: () -> Unit,
-    onSelect: (SubServerInfo) -> Unit
-) {
-    val subServers = listOf(
-        SubServerInfo("AS1", "亚洲", "104.234.6.50", 10001),
-        SubServerInfo("AS2", "亚洲", "104.234.6.50", 10002),
-        SubServerInfo("AS3", "亚洲", "104.234.6.50", 10003),
-        SubServerInfo("AS4", "亚洲", "104.234.6.50", 10004),
-        SubServerInfo("AS5", "亚洲", "104.234.6.50", 10005),
-        SubServerInfo("EU1", "欧洲", "178.32.145.167", 10001),
-        SubServerInfo("EU2", "欧洲", "178.32.145.167", 10002),
-        SubServerInfo("EU3", "欧洲", "178.32.145.167", 10003),
-        SubServerInfo("EU4", "欧洲", "178.32.145.167", 10004),
-        SubServerInfo("EU5", "欧洲", "178.32.145.167", 10005),
-        SubServerInfo("NA1", "北美", "51.79.62.8", 10001),
-        SubServerInfo("NA2", "北美", "51.79.62.8", 10002),
-        SubServerInfo("NA3", "北美", "51.79.62.8", 10003),
-        SubServerInfo("NA4", "北美", "51.79.62.8", 10004),
-        SubServerInfo("NA5", "北美", "51.79.62.8", 10005),
-        SubServerInfo("SA1", "南非", "38.54.63.126", 10001),
-        SubServerInfo("SA2", "南非", "38.54.63.126", 10002),
-        SubServerInfo("SA3", "南非", "38.54.63.126", 10003),
-        SubServerInfo("SA4", "南非", "38.54.63.126", 10004),
-        SubServerInfo("SA5", "南非", "38.54.63.126", 10005)
-    )
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(4.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        RoundedCornerShape(2.dp)
-                    )
-            )
-        }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "选择 Zeqa 分服",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        "取消",
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Text(
-                "基于你的地理位置选择一个分服",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(subServers) { subServer ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .clickable {
-                                onSelect(subServer)
-                            },
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = subServer.id,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = subServer.region,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Spacer(modifier = Modifier.weight(1f))
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = subServer.serverAddress,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "端口: ${subServer.serverPort}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 
 

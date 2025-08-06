@@ -61,7 +61,7 @@ fun PortraitLauncherContent() {
         // 自动启动主界面
         delay(2000)
         coroutineScope.launch {
-            startActivityWithTransition(context, NewMainActivity::class.java)
+            startActivityWithTransition(context, NewMainActivity::class.java as Class<*>)
         }
     }
     
@@ -138,7 +138,7 @@ fun PortraitLauncherContent() {
                         onClick = {
                             coroutineScope.launch {
                                 loadingCard = "main"
-                                startActivityWithTransition(context, NewMainActivity::class.java)
+                                startActivityWithTransition(context, NewMainActivity::class.java as Class<*>)
                             }
                         }
                     )
@@ -150,7 +150,7 @@ fun PortraitLauncherContent() {
                         onClick = {
                             coroutineScope.launch {
                                 loadingCard = "remote"
-                                startActivityWithTransition(context, RemoteLinkActivity::class.java)
+                                startActivityWithTransition(context, RemoteLinkActivity::class.java as Class<*>)
                             }
                         }
                     )
