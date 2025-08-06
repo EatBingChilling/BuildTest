@@ -60,7 +60,7 @@
         <activity
             android:name=".activity.LaunchActivity"
             android:exported="true"
-            android:screenOrientation="landscape">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -75,7 +75,7 @@
         <activity
             android:name=".activity.MainActivity"
             android:exported="false"
-            android:screenOrientation="landscape">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.OPEN_DOCUMENT" />
 
@@ -85,6 +85,10 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".activity.NewMainActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity android:name=".activity.CrashHandlerActivity" />
                 <activity
     android:name=".WebviewDownloader"

@@ -23,7 +23,6 @@ class LaunchActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
             controller.hide(WindowInsetsCompat.Type.systemBars())
@@ -38,26 +37,8 @@ class LaunchActivity : ComponentActivity() {
                 }
             }
         }
-
-
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 suspend fun startActivityWithTransition(context: android.content.Context, destinationClass: Class<*>) {
     delay(800)

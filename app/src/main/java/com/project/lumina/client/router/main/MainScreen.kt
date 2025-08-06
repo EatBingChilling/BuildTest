@@ -27,7 +27,7 @@ enum class MainScreenPages(
     HomePage(
         icon = { Icon(Icons.TwoTone.Home, contentDescription = null) },
         label = { Text(stringResource(R.string.home)) },
-        content = { HomePageContent() }
+        content = { NewHomePageContent() }
     )
 }
 
@@ -40,11 +40,20 @@ fun MainScreen() {
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         
-        HomePageContent()
+        NewHomePageContent()
         
         
         Box(modifier = Modifier.zIndex(10f)) {
             SimpleOverlayNotification.Content()
         }
     }
+}
+
+@Composable
+fun NewHomePageContent() {
+    NewHomeScreen(
+        onStartToggle = {
+            // 这里可以添加启动/停止服务的逻辑
+        }
+    )
 }

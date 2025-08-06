@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.window.layout.WindowMetricsCalculator
-import com.project.lumina.client.activity.MainActivity
+import com.project.lumina.client.activity.NewMainActivity
 import com.project.lumina.client.activity.RemoteLinkActivity
 import com.project.lumina.client.activity.startActivityWithTransition
 import kotlinx.coroutines.delay
@@ -48,6 +48,9 @@ fun PortraitLauncherContent() {
     var titleMovedUp by remember { mutableStateOf(false) }
     var showCards by remember { mutableStateOf(false) }
     var loadingCard by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
     LaunchedEffect(Unit) {
         delay(300)
         showTitle = true
@@ -55,9 +58,13 @@ fun PortraitLauncherContent() {
         titleMovedUp = true
         delay(600)
         showCards = true
+        // 自动启动主界面
+        delay(2000)
+        coroutineScope.launch {
+            startActivityWithTransition(context, NewMainActivity::class.java)
+        }
     }
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    
     val titleOffsetY = animateFloatAsState(
         targetValue = if (titleMovedUp) -20f else 0f, 
         animationSpec = tween(800, easing = androidx.compose.animation.core.EaseOutQuart),
@@ -67,6 +74,7 @@ fun PortraitLauncherContent() {
         WindowMetricsCalculator.getOrCreate().computeCurrentWindowMetrics(context)
     }
     val screenHeight = with(LocalDensity.current) { windowMetrics.bounds.height().toDp() }
+    
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -100,7 +108,7 @@ fun PortraitLauncherContent() {
                         if (titleMovedUp) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "选择模式",
+                                text = "正在启动...",
                                 fontSize = 16.sp,
                                 color = Color.White.copy(alpha = 0.7f),
                                 textAlign = TextAlign.Center
@@ -130,7 +138,7 @@ fun PortraitLauncherContent() {
                         onClick = {
                             coroutineScope.launch {
                                 loadingCard = "main"
-                                startActivityWithTransition(context, MainActivity::class.java)
+                                startActivityWithTransition(context, NewMainActivity::class.java)
                             }
                         }
                     )
