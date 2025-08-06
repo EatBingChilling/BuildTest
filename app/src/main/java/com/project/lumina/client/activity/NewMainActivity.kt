@@ -159,40 +159,40 @@ class NewMainActivity : ComponentActivity() {
         }
         
         // 初始化游戏管理器
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    GameManager.initialize(this@NewMainActivity)
-                    Log.d("NewMainActivity", "GameManager initialized successfully")
-                } catch (e: Exception) {
-                    Log.e("NewMainActivity", "Failed to initialize GameManager", e)
-                }
-            }
-        }
+        // lifecycleScope.launch {
+        //     withContext(Dispatchers.IO) {
+        //         try {
+        //             GameManager.initialize(this@NewMainActivity)
+        //             Log.d("NewMainActivity", "GameManager initialized successfully")
+        //         } catch (e: Exception) {
+        //             Log.e("NewMainActivity", "Failed to initialize GameManager", e)
+        //         }
+        //     }
+        // }
         
         // 初始化账户管理器
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    AccountManager.initialize(this@NewMainActivity)
-                    Log.d("NewMainActivity", "AccountManager initialized successfully")
-                } catch (e: Exception) {
-                    Log.e("NewMainActivity", "Failed to initialize AccountManager", e)
-                }
-            }
-        }
+        // lifecycleScope.launch {
+        //     withContext(Dispatchers.IO) {
+        //         try {
+        //             AccountManager.initialize(this@NewMainActivity)
+        //             Log.d("NewMainActivity", "AccountManager initialized successfully")
+        //         } catch (e: Exception) {
+        //             Log.e("NewMainActivity", "Failed to initialize AccountManager", e)
+        //         }
+        //     }
+        // }
         
         // 初始化领域管理器
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    RealmManager.initialize(this@NewMainActivity)
-                    Log.d("NewMainActivity", "RealmManager initialized successfully")
-                } catch (e: Exception) {
-                    Log.e("NewMainActivity", "Failed to initialize RealmManager", e)
-                }
-            }
-        }
+        // lifecycleScope.launch {
+        //     withContext(Dispatchers.IO) {
+        //         try {
+        //             RealmManager.initialize(this@NewMainActivity)
+        //             Log.d("NewMainActivity", "RealmManager initialized successfully")
+        //         } catch (e: Exception) {
+        //             Log.e("NewMainActivity", "Failed to initialize RealmManager", e)
+        //         }
+        //     }
+        // }
     }
     
     override fun onDestroy() {
