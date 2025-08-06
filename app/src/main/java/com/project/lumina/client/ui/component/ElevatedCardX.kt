@@ -29,7 +29,7 @@ fun ElevatedCardX(
     modifier: Modifier = Modifier,
     shape: CornerBasedShape = MaterialTheme.shapes.large,
     elevation: Dp = 4.dp,
-    backgroundColor: Color = EColorCard1.copy(alpha = 0.95f),
+    backgroundColor: Color = EColorCard1().copy(alpha = 0.95f),
     content: @Composable () -> Unit
 ) {
     val transition = rememberInfiniteTransition()
@@ -44,7 +44,7 @@ fun ElevatedCardX(
 
     val gradientBrush = remember(animatedOffset) {
         Brush.linearGradient(
-            colors = listOf(EColorCard2, EColorCard3),
+            colors = listOf(EColorCard2(), EColorCard3()),
             start = Offset(animatedOffset, animatedOffset),
             end = Offset(animatedOffset + 300f, animatedOffset + 100f)
         )

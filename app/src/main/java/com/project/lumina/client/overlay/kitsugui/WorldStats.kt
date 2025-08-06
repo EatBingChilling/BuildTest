@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.lumina.client.constructors.GameManager
-import com.project.lumina.client.ui.theme.KitsuPrimary
+import com.project.lumina.client.ui.theme.KitsuPrimary()
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 import com.project.lumina.client.R
@@ -262,7 +262,7 @@ fun WorldStats() {
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            KitsuPrimary.copy(alpha = 0.1f),
+                            KitsuPrimary().copy(alpha = 0.1f),
                             Color.Transparent
                         )
                     )
@@ -281,7 +281,7 @@ fun WorldStats() {
                     Icon(
                         painter = painterResource(id = ir.alirezaivaz.tablericons.R.drawable.ic_world_code),
                         contentDescription = null,
-                        tint = KitsuPrimary,
+                        tint = KitsuPrimary(),
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -297,7 +297,7 @@ fun WorldStats() {
                     Icon(
                         painter = painterResource(id = ir.alirezaivaz.tablericons.R.drawable.ic_server_2),
                         contentDescription = null,
-                        tint = KitsuPrimary,
+                        tint = KitsuPrimary(),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(Modifier.width(6.dp))
@@ -315,7 +315,7 @@ fun WorldStats() {
                     modifier = Modifier
                         .size(48.dp)
                         .align(Alignment.CenterHorizontally),
-                    color = KitsuPrimary
+                    color = KitsuPrimary()
                 )
             } else if (!hasData) {
                 Text(
@@ -426,7 +426,7 @@ fun WorldStats() {
                             pair.forEach { (name, value, iconRes) ->
                                 var isHovered by remember { mutableStateOf(false) }
                                 val backgroundColor by animateColorAsState(
-                                    if (isHovered) KitsuPrimary.copy(alpha = 0.2f) else Color(0xFF1A1A1A)
+                                    if (isHovered) KitsuPrimary().copy(alpha = 0.2f) else Color(0xFF1A1A1A)
                                 )
 
                                 OutlinedCard(
@@ -437,7 +437,7 @@ fun WorldStats() {
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable { /* Add click action if needed */ }
                                         .background(backgroundColor)
-                                        .border(1.dp, KitsuPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                                        .border(1.dp, KitsuPrimary().copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                                     colors = CardDefaults.cardColors(
                                         containerColor = Color.Transparent
                                     )
@@ -452,7 +452,7 @@ fun WorldStats() {
                                         Icon(
                                             painter = painterResource(id = iconRes),
                                             contentDescription = null,
-                                            tint = KitsuPrimary,
+                                            tint = KitsuPrimary(),
                                             modifier = Modifier.size(24.dp)
                                         )
                                         Spacer(Modifier.width(12.dp))

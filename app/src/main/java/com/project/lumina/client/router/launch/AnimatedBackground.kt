@@ -20,10 +20,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.project.lumina.client.ui.theme.LBg1
-import com.project.lumina.client.ui.theme.LBg2
-import com.project.lumina.client.ui.theme.LBlobColor1
-import com.project.lumina.client.ui.theme.LBlobColor2
+import com.project.lumina.client.ui.theme.LBg1()
+import com.project.lumina.client.ui.theme.LBg2()
+import com.project.lumina.client.ui.theme.LBlobColor1()
+import com.project.lumina.client.ui.theme.LBlobColor2()
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -66,8 +66,8 @@ fun AnimatedBackground(isPreloading: Boolean) {
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            LBg1,
-                            LBg2
+                            LBg1(),
+                            LBg2()
                         )
                     )
                 )
@@ -85,8 +85,8 @@ fun AnimatedBackground(isPreloading: Boolean) {
 
 private fun DrawScope.drawSmoothWaves(primaryPhase: Float, secondaryPhase: Float, isPreloading: Boolean) {
 
-    val primaryColor = LBlobColor1.copy(alpha = 0.25f)
-    val secondaryColor = LBlobColor2.copy(alpha = 0.2f)
+    val primaryColor = LBlobColor1().copy(alpha = 0.25f)
+    val secondaryColor = LBlobColor2().copy(alpha = 0.2f)
 
 
     val segmentCount = 200

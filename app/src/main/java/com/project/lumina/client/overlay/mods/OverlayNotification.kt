@@ -139,7 +139,7 @@ private fun NotificationCard(
     LaunchedEffect(Unit) { progressAnimation.animateTo(0f, tween(2500)) }
 
     val accentColor = when (item.action) {
-        ModuleAction.ENABLE  -> ONotifAccent
+        ModuleAction.ENABLE  -> ONotifAccent()
         ModuleAction.DISABLE -> Color(0xFFE53935)
     }
 
@@ -161,7 +161,7 @@ private fun NotificationCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(ONotifBase.copy(alpha = 0.4f)) // ✅ 背景统一颜色，透明度 40%
+                .background(ONotifBase().copy(alpha = 0.4f)) // ✅ 背景统一颜色，透明度 40%
                 .padding(10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -172,7 +172,7 @@ private fun NotificationCard(
             ) {
                 Text(
                     text = item.moduleName,
-                    color = ONotifText,
+                    color = ONotifText(),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -188,7 +188,7 @@ private fun NotificationCard(
 
             Text(
                 text = statusText,
-                color = ONotifText.copy(alpha = 0.8f),
+                color = ONotifText().copy(alpha = 0.8f),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -197,7 +197,7 @@ private fun NotificationCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp)
-                    .background(ONotifProgressbar.copy(alpha = 0.3f), RoundedCornerShape(1.5.dp))
+                    .background(ONotifProgressbar().copy(alpha = 0.3f), RoundedCornerShape(1.5.dp))
             ) {
                 Box(
                     modifier = Modifier

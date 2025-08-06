@@ -47,7 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.lumina.client.constructors.GameManager
-import com.project.lumina.client.ui.theme.KitsuPrimary
+import com.project.lumina.client.ui.theme.KitsuPrimary()
 import kotlinx.coroutines.delay
 import org.cloudburstmc.math.vector.Vector2f
 import org.cloudburstmc.nbt.NbtList
@@ -386,7 +386,7 @@ fun HomeCategoryUi() {
             )
 
             val animatedBorderColor by animateColorAsState(
-                targetValue = if (isPressed1) KitsuPrimary else Color(0xFF374151),
+                targetValue = if (isPressed1) KitsuPrimary() else Color(0xFF374151),
                 animationSpec = tween(200),
                 label = "borderColor1"
             )
@@ -442,7 +442,7 @@ fun HomeCategoryUi() {
                             Surface(
                                 modifier = Modifier.size(36.dp),
                                 shape = CircleShape,
-                                color = KitsuPrimary.copy(alpha = 0.2f),
+                                color = KitsuPrimary().copy(alpha = 0.2f),
                                 shadowElevation = 2.dp
                             ) {
                                 Box(
@@ -452,7 +452,7 @@ fun HomeCategoryUi() {
                                     Icon(
                                         painter = painterResource(id = ir.alirezaivaz.tablericons.R.drawable.ic_universe),
                                         contentDescription = "Version Icon",
-                                        tint = KitsuPrimary,
+                                        tint = KitsuPrimary(),
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -601,7 +601,7 @@ fun HomeCategoryUi() {
                         width = 1.dp,
                         brush = Brush.linearGradient(
                             colors = listOf(
-                                if (isPressed3) KitsuPrimary else Color(0xFF374151),
+                                if (isPressed3) KitsuPrimary() else Color(0xFF374151),
                                 if (isPressed3) Color(0xFF06B6D4) else Color(0xFF4B5563)
                             )
                         ),

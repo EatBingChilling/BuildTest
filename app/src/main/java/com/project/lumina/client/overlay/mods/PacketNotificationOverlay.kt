@@ -142,7 +142,7 @@ fun PacketNotificationCard(
 
     val gradientBrush = remember {
         Brush.linearGradient(
-            colors = listOf(PColorGradient1, PColorGradient2),
+            colors = listOf(PColorGradient1(), PColorGradient2()),
             start = Offset.Zero,
             end = Offset(100f, 100f)
         )
@@ -169,7 +169,7 @@ fun PacketNotificationCard(
             modifier = Modifier
                 .width(250.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(PBackground)
+                .background(PBackground())
                 .padding(10.dp)
         ) {
             Row(

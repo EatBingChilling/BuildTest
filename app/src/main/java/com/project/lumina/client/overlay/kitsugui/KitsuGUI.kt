@@ -165,7 +165,7 @@ class KitsuGUI : OverlayWindow() {
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = KitsuSurface
+                    containerColor = KitsuSurface()
                 ),
                 modifier = Modifier
                     .widthIn(max = cardWidth)
@@ -208,7 +208,7 @@ class KitsuGUI : OverlayWindow() {
                 .width(160.dp)
                 .fillMaxHeight()
                 .background(
-                    color = KitsuSurface,
+                    color = KitsuSurface(),
                     shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
                 )
                 .padding(12.dp),
@@ -225,7 +225,7 @@ class KitsuGUI : OverlayWindow() {
                         .clip(RoundedCornerShape(8.dp))
                         .background(
                             brush = Brush.linearGradient(
-                                colors = listOf(KitsuPrimary, KitsuSecondary)
+                                colors = listOf(KitsuPrimary(), KitsuSecondary())
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -246,7 +246,7 @@ class KitsuGUI : OverlayWindow() {
                         fontSize = 18.sp,
                         fontFamily = modernFont,
                         fontWeight = FontWeight.Bold,
-                        color = KitsuOnSurface
+                        color = KitsuOnSurface()
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -292,8 +292,8 @@ class KitsuGUI : OverlayWindow() {
 
         val backgroundColor by animateColorAsState(
             targetValue = when {
-                isSelected -> KitsuSelected.copy(alpha = 0.8f)
-                isHovered -> KitsuHover.copy(alpha = 0.4f)
+                isSelected -> KitsuSelected().copy(alpha = 0.8f)
+                isHovered -> KitsuHover().copy(alpha = 0.4f)
                 else -> Color.Transparent
             },
             animationSpec = tween(durationMillis = 200),
@@ -301,13 +301,13 @@ class KitsuGUI : OverlayWindow() {
         )
 
         val textColor by animateColorAsState(
-            targetValue = if (isSelected) Color.White else KitsuOnSurfaceVariant,
+            targetValue = if (isSelected) Color.White else KitsuOnSurface()Variant,
             animationSpec = tween(durationMillis = 200),
             label = "textColor"
         )
 
         val iconColor by animateColorAsState(
-            targetValue = if (isSelected) Color.White else KitsuOnSurfaceVariant,
+            targetValue = if (isSelected) Color.White else KitsuOnSurface()Variant,
             animationSpec = tween(durationMillis = 200),
             label = "iconColor"
         )
@@ -357,7 +357,7 @@ class KitsuGUI : OverlayWindow() {
         Card(
             shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp),
             colors = CardDefaults.cardColors(
-                containerColor = KitsuSurface
+                containerColor = KitsuSurface()
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -390,7 +390,7 @@ class KitsuGUI : OverlayWindow() {
                                 fontSize = 24.sp,
                                 fontFamily = modernFont,
                                 fontWeight = FontWeight.Bold,
-                                color = KitsuOnSurface
+                                color = KitsuOnSurface()
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -456,7 +456,7 @@ class KitsuGUI : OverlayWindow() {
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .background(
-                    color = KitsuSurface,
+                    color = KitsuSurface(),
                     shape = RoundedCornerShape(8.dp)
                 )
         ) {
@@ -490,8 +490,8 @@ class KitsuGUI : OverlayWindow() {
             targetValue = when {
                 isClose && isPressed -> Color(0xFFE81123)
                 isClose -> Color(0xFFE81123).copy(alpha = 0.9f)
-                isPressed -> KitsuSurfaceVariant
-                else -> KitsuSurfaceVariant.copy(alpha = 0.6f)
+                isPressed -> KitsuSurface()Variant
+                else -> KitsuSurface()Variant.copy(alpha = 0.6f)
             },
             animationSpec = tween(durationMillis = 150),
             label = "buttonBackgroundColor"
@@ -521,7 +521,7 @@ class KitsuGUI : OverlayWindow() {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = if (isClose) Color.White else KitsuOnSurfaceVariant,
+                tint = if (isClose) Color.White else KitsuOnSurface()Variant,
                 modifier = Modifier.size(18.dp)
             )
         }

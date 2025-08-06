@@ -164,7 +164,7 @@ fun ModuleContentA(moduleCategory: CheatCategory) {
                         .graphicsLayer {
                             rotationZ = rotationAnimation
                         },
-                    color = ProgressIndicatorColor
+                    color = ProgressIndicatorColor()
                 )
             }
         }
@@ -177,7 +177,7 @@ private fun ModuleCard(element: Element) {
     val hasSettings = values.isNotEmpty()
 
     val background by animateColorAsState(
-        targetValue = if (element.isEnabled) EnabledBackgroundColor else DisabledBackgroundColor,
+        targetValue = if (element.isEnabled) EnabledBackgroundColor() else DisabledBackgroundColor(),
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -206,7 +206,7 @@ private fun ModuleCard(element: Element) {
                 drawContent()
                 if (element.isEnabled) {
                     drawRect(
-                        color = EnabledGlowColor,
+                        color = EnabledGlowColor(),
                         topLeft = this.center,
                         size = this.size,
                         alpha = glowAlpha
@@ -243,7 +243,7 @@ private fun ModuleCard(element: Element) {
                     .padding(6.dp)
             ) {
                 val textColor by animateColorAsState(
-                    targetValue = if (element.isEnabled) EnabledTextColor else DisabledTextColor,
+                    targetValue = if (element.isEnabled) EnabledTextColor() else DisabledTextColor(),
                     animationSpec = tween(durationMillis = 200)
                 )
 
@@ -269,7 +269,7 @@ private fun ModuleCard(element: Element) {
                     )
 
                     val iconTint by animateColorAsState(
-                        targetValue = if (element.isExpanded) EnabledIconColor else DisabledIconColor,
+                        targetValue = if (element.isExpanded) EnabledIconColor() else DisabledIconColor(),
                         animationSpec = tween(durationMillis = 200)
                     )
 
@@ -323,7 +323,7 @@ private fun ChoiceValueContent(value: ListValue) {
         Text(
             text = value.name,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-            color = DisabledTextColor
+            color = DisabledTextColor()
         )
         Row(
             modifier = Modifier
@@ -335,7 +335,7 @@ private fun ChoiceValueContent(value: ListValue) {
                 val isSelected = value.value == item
 
                 val cardColor by animateColorAsState(
-                    targetValue = if (isSelected) ChoiceSelectedColor else ChoiceUnselectedColor,
+                    targetValue = if (isSelected) ChoiceSelectedColor() else ChoiceUnselectedColor(),
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
                         stiffness = Spring.StiffnessMedium
@@ -362,7 +362,7 @@ private fun ChoiceValueContent(value: ListValue) {
                     shape = RoundedCornerShape(4.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = cardColor,
-                        contentColor = if (isSelected) EnabledTextColor else DisabledTextColor
+                        contentColor = if (isSelected) EnabledTextColor() else DisabledTextColor()
                     )
                 ) {
                     Box(
@@ -397,13 +397,13 @@ private fun FloatValueContent(value: FloatValue) {
             Text(
                 text = value.name,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-                color = DisabledTextColor
+                color = DisabledTextColor()
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "%.2f".format(value.value),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-                color = DisabledTextColor
+                color = DisabledTextColor()
             )
         }
         CustomSlider(
@@ -436,13 +436,13 @@ private fun IntValueContent(value: IntValue) {
             Text(
                 text = value.name,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-                color = DisabledTextColor
+                color = DisabledTextColor()
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = value.value.toString(),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-                color = DisabledTextColor
+                color = DisabledTextColor()
             )
         }
         CustomSlider(
@@ -513,7 +513,7 @@ private fun CustomSlider(
                 .fillMaxWidth()
                 .height(3.dp)
                 .align(Alignment.Center)
-                .background(SliderTrackColor, RoundedCornerShape(1.5.dp))
+                .background(SliderTrackColor(), RoundedCornerShape(1.5.dp))
         )
         
         val fraction = (animatedValue - valueRange.start) / (valueRange.endInclusive - valueRange.start)
@@ -530,7 +530,7 @@ private fun CustomSlider(
                 .width(activeTrackWidth.toDp())
                 .height(3.dp)
                 .align(Alignment.CenterStart)
-                .background(SliderActiveTrackColor, RoundedCornerShape(1.5.dp))
+                .background(SliderActiveTrackColor(), RoundedCornerShape(1.5.dp))
         )
         
         Box(
@@ -538,7 +538,7 @@ private fun CustomSlider(
                 .offset(x = (fraction * sliderWidth).toDp() - 4.dp)
                 .size(8.dp)
                 .scale(thumbScale)
-                .background(SliderThumbColor, CircleShape)
+                .background(SliderThumbColor(), CircleShape)
                 .align(Alignment.CenterStart)
         )
     }
@@ -565,7 +565,7 @@ private fun BoolValueContent(value: BoolValue) {
         Text(
             text = value.name,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-            color = DisabledTextColor
+            color = DisabledTextColor()
         )
         Spacer(modifier = Modifier.weight(1f))
 
@@ -578,7 +578,7 @@ private fun BoolValueContent(value: BoolValue) {
         )
 
         val toggleColor by animateColorAsState(
-            targetValue = if (value.value) CheckboxCheckedColor else CheckboxUncheckedColor,
+            targetValue = if (value.value) CheckboxCheckedColor() else CheckboxUncheckedColor(),
             animationSpec = tween(durationMillis = 200)
         )
 
@@ -619,7 +619,7 @@ private fun ShortcutContent(element: Element) {
         Text(
             text = stringResource(R.string.shortcut),
             style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize * 0.9),
-            color = DisabledTextColor
+            color = DisabledTextColor()
         )
         Spacer(modifier = Modifier.weight(1f))
 
@@ -632,7 +632,7 @@ private fun ShortcutContent(element: Element) {
         )
 
         val toggleColor by animateColorAsState(
-            targetValue = if (element.isShortcutDisplayed) CheckboxCheckedColor else CheckboxUncheckedColor,
+            targetValue = if (element.isShortcutDisplayed) CheckboxCheckedColor() else CheckboxUncheckedColor(),
             animationSpec = tween(durationMillis = 200)
         )
 

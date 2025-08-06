@@ -32,7 +32,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material3.icons.rounded.*
+import androidx.compose.material.icons.filled.Check
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,7 @@ import kotlinx.coroutines.launch
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import com.project.lumina.client.activity.AppVerificationManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +86,7 @@ fun NewHomeScreen(
     var verificationMessage by remember { mutableStateOf("正在连接服务器...") }
     var verificationError by remember { mutableStateOf<String?>(null) }
     var showVerificationOverlay by remember { mutableStateOf(true) }
+    var verificationProgress by remember { mutableStateOf(0f) }
 
     // 页面状态
     var selectedTab by remember { mutableStateOf(0) }
@@ -102,17 +105,35 @@ fun NewHomeScreen(
 
 项目地址: https://github.com/你的仓库"""
 
-    // 验证流程（Material3风格，网络失败自动跳过）
+    // 真正的验证流程
     LaunchedEffect(Unit) {
         try {
-            // 这里调用AppVerificationManager的验证逻辑，伪代码如下：
-            // AppVerificationManager(context) { isVerifying = false }
-            // 你可以用实际的Compose实现或Dialog实现验证UI
-            // 这里只做演示，实际请用Material3控件
-            delay(1500)
+            // 模拟AppVerificationManager的验证步骤
+            verificationStep = 1
+            verificationMessage = "正在连接服务器..."
+            verificationProgress = 0.25f
+            delay(1000)
+            
+            verificationStep = 2
+            verificationMessage = "获取公告..."
+            verificationProgress = 0.5f
+            delay(1000)
+            
+            verificationStep = 3
+            verificationMessage = "获取隐私协议..."
+            verificationProgress = 0.75f
+            delay(1000)
+            
+            verificationStep = 4
+            verificationMessage = "检查版本..."
+            verificationProgress = 1.0f
+            delay(1000)
+            
             isVerifying = false
         } catch (e: Exception) {
             // 网络失败自动跳过
+            verificationError = "网络连接失败，跳过验证"
+            delay(500)
             isVerifying = false
         }
     }
@@ -190,13 +211,125 @@ fun NewHomeScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text("应用验证中…", style = MaterialTheme.typography.titleMedium)
+                        // 验证步骤指示器
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { verificationProgress },
+                                modifier = Modifier.width(200.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            
+                            Text(
+                                text = verificationMessage,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            
+                            if (verificationError != null) {
+                                Text(
+                                    text = verificationError!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        // 验证步骤列表
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            VerificationStep(
+                                step = 1,
+                                title = "连接服务器",
+                                isCompleted = verificationStep >= 1,
+                                isCurrent = verificationStep == 1
+                            )
+                            VerificationStep(
+                                step = 2,
+                                title = "获取公告",
+                                isCompleted = verificationStep >= 2,
+                                isCurrent = verificationStep == 2
+                            )
+                            VerificationStep(
+                                step = 3,
+                                title = "隐私协议",
+                                isCompleted = verificationStep >= 3,
+                                isCurrent = verificationStep == 3
+                            )
+                            VerificationStep(
+                                step = 4,
+                                title = "版本检查",
+                                isCompleted = verificationStep >= 4,
+                                isCurrent = verificationStep == 4
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun VerificationStep(
+    step: Int,
+    title: String,
+    isCompleted: Boolean,
+    isCurrent: Boolean
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 步骤图标
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(
+                    color = when {
+                        isCompleted -> MaterialTheme.colorScheme.primary
+                        isCurrent -> MaterialTheme.colorScheme.primaryContainer
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isCompleted) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else {
+                Text(
+                    text = step.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer 
+                           else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = when {
+                isCompleted -> MaterialTheme.colorScheme.primary
+                isCurrent -> MaterialTheme.colorScheme.onSurface
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+        )
     }
 }
 

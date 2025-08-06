@@ -96,7 +96,7 @@ fun ModuleSettingsScreen(
                 .offset(x = offsetX)
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(MColorScreen1, MColorScreen1),
+                        colors = listOf(MColorScreen1(), MColorScreen1()),
                         start = Offset(0f, 0f),
                         end = Offset(400f, 400f)
                     ),
@@ -122,7 +122,7 @@ fun ModuleSettingsScreen(
                             "属性配置",
                             modifier = Modifier.align(Alignment.CenterStart),
                             style = MaterialTheme.typography.titleMedium,
-                            color = MColorScreen2.copy(alpha = 0.9f)
+                            color = MColorScreen2().copy(alpha = 0.9f)
                         )
 
                         IconButton(
@@ -132,7 +132,7 @@ fun ModuleSettingsScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_close_black_24dp),
                                 contentDescription = "关闭",
-                                tint = MColorScreen2.copy(alpha = 0.9f)
+                                tint = MColorScreen2().copy(alpha = 0.9f)
                             )
                         }
                     }
@@ -162,7 +162,7 @@ fun ModuleSettingsScreen(
                             onClick = onDismiss,
                             modifier = Modifier.align(Alignment.End),
                             colors = ButtonDefaults.textButtonColors(
-                                contentColor = MColorScreen2.copy(alpha = 0.9f)
+                                contentColor = MColorScreen2().copy(alpha = 0.9f)
                             )
                         ) {
                             Text("关闭")
