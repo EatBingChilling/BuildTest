@@ -60,9 +60,9 @@ fun NavigationRailItemY(
                 brush = if (selected) {
                     Brush.linearGradient(
                         colors = listOf(
-                            NColorItem4, 
-                            NColorItem5, 
-                            NColorItem6  
+                            NColorItem4(), 
+                            NColorItem5(), 
+                            NColorItem6()  
                         ),
                         start = Offset(animatedOffset, animatedOffset),
                         end = Offset(

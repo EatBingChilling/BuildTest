@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.project.lumina.client.ui.theme.PColorItem1
+import com.project.lumina.client.ui.theme.PColorItem1()
 import com.project.lumina.client.viewmodel.MainScreenViewModel
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -132,7 +132,7 @@ fun ServerSelector(
                         }
                         .border(
                             width = if (isSelected) 1.dp else 0.dp,
-                            color = if (isSelected) PColorItem1 else Color.Transparent,
+                            color = if (isSelected) PColorItem1() else Color.Transparent,
                             shape = MaterialTheme.shapes.medium
                         ),
                     colors = CardDefaults.cardColors(
@@ -157,7 +157,7 @@ fun ServerSelector(
                             Text(
                                 text = "✓",
                                 fontSize = 16.sp,
-                                color = PColorItem1,
+                                color = PColorItem1(),
                                 modifier = Modifier.align(Alignment.CenterEnd)
                             )
                         }

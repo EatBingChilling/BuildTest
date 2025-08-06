@@ -26,10 +26,10 @@ import androidx.compose.ui.unit.sp
 import com.project.lumina.client.constructors.NetBound
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
-import com.project.lumina.client.ui.theme.SMeterAccent
-import com.project.lumina.client.ui.theme.SMeterBase
-import com.project.lumina.client.ui.theme.SMeterBg
-import com.project.lumina.client.ui.theme.SMiniLineGrpah
+import com.project.lumina.client.ui.theme.SMeterAccent()
+import com.project.lumina.client.ui.theme.SMeterBase()
+import com.project.lumina.client.ui.theme.SMeterBg()
+import com.project.lumina.client.ui.theme.SMiniLineGrpah()
 
 
 import kotlinx.coroutines.CoroutineScope
@@ -277,9 +277,9 @@ class SpeedometerOverlay : OverlayWindow() {
 
     @Composable
     private fun CompactSpeedometerDisplay(speed: Float, data: List<LineData>, avgSpeed: Float) {
-        val baseColor = SMeterBase
-        val accentColor = SMeterAccent
-        val backgroundColor = SMeterBg
+        val baseColor = SMeterBase()
+        val accentColor = SMeterAccent()
+        val backgroundColor = SMeterBg()
 
         
         val animatedSpeed by animateFloatAsState(
@@ -376,7 +376,7 @@ class SpeedometerOverlay : OverlayWindow() {
                         .fillMaxWidth()
                         .height(20.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(SMiniLineGrpah),
+                        .background(SMiniLineGrpah()),
                     data = graphDataToShow,
                     lineColor = accentColor
                 )

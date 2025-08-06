@@ -68,9 +68,9 @@ fun NavigationRailItemX(
                 brush = if (selected) {
                     Brush.linearGradient(
                         colors = listOf(
-                            NColorItem1, 
-                            NColorItem1, 
-                            NColorItem1  
+                            NColorItem1(), 
+                            NColorItem1(), 
+                            NColorItem1()  
                         ),
                         start = Offset(animatedOffset, animatedOffset),
                         end = Offset(
@@ -101,7 +101,7 @@ fun NavigationRailItemX(
                 Icon(
                     painter = painterResource(id = iconResId),
                     contentDescription = null,
-                    tint = if (selected) NColorItem2 else NColorItem3,
+                    tint = if (selected) NColorItem2() else NColorItem3(),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -112,7 +112,7 @@ fun NavigationRailItemX(
             
             Text(
                 text = stringResource(labelResId),
-                color = if (selected) NColorItem2 else NColorItem3,
+                color = if (selected) NColorItem2() else NColorItem3(),
                 //fontFamily = CustomFontFamily,
                 style = TextStyle(fontSize = 16.sp),
                 modifier = Modifier.defaultMinSize(minWidth = 80.dp),

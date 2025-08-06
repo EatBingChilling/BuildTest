@@ -162,7 +162,7 @@ class MiniMapOverlay : OverlayWindow() {
         Box(
             modifier = Modifier
                 .size(dpSize)
-                .background(Mbg, shape = RoundedCornerShape(16.dp)),
+                .background(Mbg(), shape = RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.size(dpSize)) {
@@ -170,7 +170,7 @@ class MiniMapOverlay : OverlayWindow() {
                 val centerY = this.size.height / 2
 
 
-                val gridColor = MgridColor
+                val gridColor = MgridColor()
                 val gridSpacing = this.size.width / 10
                 for (i in 1 until 10) {
                     val x = i * gridSpacing
@@ -179,12 +179,12 @@ class MiniMapOverlay : OverlayWindow() {
                 }
 
 
-                drawLine(MCrosshair, Offset(centerX, 0f), Offset(centerX, this.size.height), strokeWidth = 1.5f)
-                drawLine(MCrosshair, Offset(0f, centerY), Offset(this.size.width, centerY), strokeWidth = 1.5f)
+                drawLine(MCrosshair(), Offset(centerX, 0f), Offset(centerX, this.size.height), strokeWidth = 1.5f)
+                drawLine(MCrosshair(), Offset(0f, centerY), Offset(this.size.width, centerY), strokeWidth = 1.5f)
 
 
                 val playerDotRadius = minimapDotSize * minimapZoom
-                drawCircle(MPlayerMarker, radius = playerDotRadius, center = Offset(centerX, centerY))
+                drawCircle(MPlayerMarker(), radius = playerDotRadius, center = Offset(centerX, centerY))
 
 
 
@@ -223,7 +223,7 @@ class MiniMapOverlay : OverlayWindow() {
                     val entityY = centerY - clampedDistance * cos(angle)
 
                     drawCircle(
-                        color = if (distance < radius * 0.9f) MEntityClose else MEntityFar,
+                        color = if (distance < radius * 0.9f) MEntityClose() else MEntityFar(),
                         radius = dotRadius,
                         center = Offset(entityX, entityY)
                     )

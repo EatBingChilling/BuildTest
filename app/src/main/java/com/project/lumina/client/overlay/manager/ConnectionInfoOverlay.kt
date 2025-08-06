@@ -63,7 +63,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.util.Log
-import com.project.lumina.client.ui.theme.KitsuPrimary
+import com.project.lumina.client.ui.theme.KitsuPrimary()
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.util.Enumeration
@@ -267,7 +267,7 @@ class ConnectionInfoWindow : OverlayWindow() {
                         Icon(
                             imageVector = Icons.Default.Public,
                             contentDescription = "IP地址",
-                            tint = KitsuPrimary,
+                            tint = KitsuPrimary(),
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
@@ -286,7 +286,7 @@ class ConnectionInfoWindow : OverlayWindow() {
                         Icon(
                             imageVector = Icons.Default.Dns,
                             contentDescription = "端口",
-                            tint = KitsuPrimary,
+                            tint = KitsuPrimary(),
                             modifier = Modifier.size(16.dp)
                         )
                         Text(

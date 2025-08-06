@@ -197,18 +197,18 @@ class KeystrokesOverlay : OverlayWindow() {
                 .scale(scale)
                 .clip(RoundedCornerShape(12.dp))
                 .background(
-                    if (isPressed) pressedColor.copy(alpha = 0.8f) else baseColor.copy(alpha = 0.85f)
+                    if (isPressed) pressedColor().copy(alpha = 0.8f) else baseColor().copy(alpha = 0.85f)
                 )
                 .border(
                     width = 1.dp,
-                    color = if (isPressed) pressedColor else borderColor.copy(alpha = 0.6f),
+                    color = if (isPressed) pressedColor() else borderColor().copy(alpha = 0.6f),
                     shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = label,
-                color = if (isPressed) Color.White else textColor,
+                color = if (isPressed) Color.White else textColor(),
                 fontSize = 16.sp,
                 fontWeight = if (isPressed) FontWeight.Bold else FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium

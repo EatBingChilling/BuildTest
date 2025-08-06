@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.lumina.client.constructors.GameDataManager
 import com.project.lumina.client.constructors.GameManager
-import com.project.lumina.client.ui.theme.TheNotBackgroundColorForOverlayUi
+import com.project.lumina.client.ui.theme.TheNotBackgroundColorForOverlayUi()
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.seconds
 
@@ -73,14 +73,14 @@ fun PlayerListUI() {
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                TheNotBackgroundColorForOverlayUi.copy(alpha = 0.2f),
-                                TheNotBackgroundColorForOverlayUi.copy(alpha = 0.1f)
+                                TheNotBackgroundColorForOverlayUi().copy(alpha = 0.2f),
+                                TheNotBackgroundColorForOverlayUi().copy(alpha = 0.1f)
                             )
                         )
                     )
                     .border(
                         1.dp,
-                        TheNotBackgroundColorForOverlayUi.copy(alpha = 0.3f),
+                        TheNotBackgroundColorForOverlayUi().copy(alpha = 0.3f),
                         RoundedCornerShape(10.dp)
                     )
                     .padding(8.dp) 
@@ -101,8 +101,8 @@ fun PlayerListUI() {
                                 .background(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            TheNotBackgroundColorForOverlayUi.copy(alpha = 0.8f),
-                                            TheNotBackgroundColorForOverlayUi.copy(alpha = 0.4f)
+                                            TheNotBackgroundColorForOverlayUi().copy(alpha = 0.8f),
+                                            TheNotBackgroundColorForOverlayUi().copy(alpha = 0.4f)
                                         )
                                     )
                                 ),
@@ -130,14 +130,14 @@ fun PlayerListUI() {
                             .background(
                                 brush = Brush.horizontalGradient(
                                     colors = listOf(
-                                        TheNotBackgroundColorForOverlayUi.copy(alpha = 0.6f),
-                                        TheNotBackgroundColorForOverlayUi.copy(alpha = 0.4f)
+                                        TheNotBackgroundColorForOverlayUi().copy(alpha = 0.6f),
+                                        TheNotBackgroundColorForOverlayUi().copy(alpha = 0.4f)
                                     )
                                 )
                             )
                             .border(
                                 1.dp,
-                                TheNotBackgroundColorForOverlayUi.copy(alpha = 0.5f),
+                                TheNotBackgroundColorForOverlayUi().copy(alpha = 0.5f),
                                 RoundedCornerShape(12.dp)
                             )
                             .padding(horizontal = 6.dp, vertical = 3.dp) 
@@ -172,7 +172,7 @@ private fun LoadingState() {
             .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
             .border(
                 1.dp,
-                TheNotBackgroundColorForOverlayUi.copy(alpha = 0.3f),
+                TheNotBackgroundColorForOverlayUi().copy(alpha = 0.3f),
                 RoundedCornerShape(10.dp)
             ),
         contentAlignment = Alignment.Center
@@ -184,7 +184,7 @@ private fun LoadingState() {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp), 
                 strokeWidth = 1.5.dp,
-                color = TheNotBackgroundColorForOverlayUi
+                color = TheNotBackgroundColorForOverlayUi()
             )
             Text(
                 text = "加载玩家...",
@@ -204,7 +204,7 @@ private fun EmptyState() {
             .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
             .border(
                 1.dp,
-                TheNotBackgroundColorForOverlayUi.copy(alpha = 0.3f),
+                TheNotBackgroundColorForOverlayUi().copy(alpha = 0.3f),
                 RoundedCornerShape(10.dp)
             ),
         contentAlignment = Alignment.Center
@@ -268,9 +268,9 @@ fun ModernPlayerCard(player: GameDataManager.PlayerInfo) {
 
     val animatedBorderColor by animateColorAsState(
         targetValue = if (isPressed)
-            TheNotBackgroundColorForOverlayUi.copy(alpha = 0.8f)
+            TheNotBackgroundColorForOverlayUi().copy(alpha = 0.8f)
         else
-            TheNotBackgroundColorForOverlayUi.copy(alpha = 0.4f),
+            TheNotBackgroundColorForOverlayUi().copy(alpha = 0.4f),
         animationSpec = tween(200),
         label = "playerCardBorder"
     )
@@ -350,7 +350,7 @@ fun ModernPlayerCard(player: GameDataManager.PlayerInfo) {
                 ) {
                     PlayerDetailChip(
                         text = "ID: ${player.entityId}",
-                        color = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.6f)
+                        color = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.6f)
                     )
 
                     if (player.buildPlatform != 0) {

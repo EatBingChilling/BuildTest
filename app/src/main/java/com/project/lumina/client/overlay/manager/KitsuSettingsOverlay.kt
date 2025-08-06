@@ -64,8 +64,8 @@ import com.project.lumina.client.constructors.Element
 import com.project.lumina.client.constructors.FloatValue
 import com.project.lumina.client.constructors.IntValue
 import com.project.lumina.client.constructors.ListValue
-import com.project.lumina.client.ui.theme.TheBackgroundColorForOverlayUi
-import com.project.lumina.client.ui.theme.TheNotBackgroundColorForOverlayUi
+import com.project.lumina.client.ui.theme.TheBackgroundColorForOverlayUi()
+import com.project.lumina.client.ui.theme.TheNotBackgroundColorForOverlayUi()
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -195,7 +195,7 @@ fun KitsuSettingsOverlay(
                 .shadow(
                     elevation = 15.dp,
                     shape = RoundedCornerShape(24.dp),
-                    spotColor = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.2f)
+                    spotColor = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.2f)
                 )
                 .pointerInput(Unit) {
                     detectDragGestures(
@@ -244,7 +244,7 @@ fun KitsuSettingsOverlay(
                 },
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = TheBackgroundColorForOverlayUi.copy(alpha = 0.95f)
+                containerColor = TheBackgroundColorForOverlayUi().copy(alpha = 0.95f)
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 12.dp
@@ -268,7 +268,7 @@ fun KitsuSettingsOverlay(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         ),
-                        color = TheNotBackgroundColorForOverlayUi,
+                        color = TheNotBackgroundColorForOverlayUi(),
                         modifier = Modifier.align(Alignment.CenterStart)
                     )
                     
@@ -281,13 +281,13 @@ fun KitsuSettingsOverlay(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "关闭",
-                            tint = TheNotBackgroundColorForOverlayUi
+                            tint = TheNotBackgroundColorForOverlayUi()
                         )
                     }
                 }
                 
                 Divider(
-                    color = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.2f),
+                    color = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.2f),
                     thickness = 1.dp
                 )
                 
@@ -311,7 +311,7 @@ fun KitsuSettingsOverlay(
                                 text = "对于这个模块没有可用的设置",
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
-                                color = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.6f)
+                                color = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.6f)
                             )
                         }
                     } else {
@@ -324,7 +324,7 @@ fun KitsuSettingsOverlay(
                             }
                             
                             Divider(
-                                color = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.1f),
+                                color = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.1f),
                                 thickness = 0.5.dp,
                                 modifier = Modifier.padding(vertical = 2.dp)
                             )
@@ -339,7 +339,7 @@ fun KitsuSettingsOverlay(
                     ) {
                         Text(
                             text = "关闭",
-                            color = TheNotBackgroundColorForOverlayUi
+                            color = TheNotBackgroundColorForOverlayUi()
                         )
                     }
                 }
@@ -370,16 +370,16 @@ private fun BoolValueSetting(value: BoolValue) {
         Text(
             text = value.name,
             style = MaterialTheme.typography.bodyMedium,
-            color = TheNotBackgroundColorForOverlayUi
+            color = TheNotBackgroundColorForOverlayUi()
         )
         
         androidx.compose.material3.Switch(
             checked = value.value,
             onCheckedChange = { value.value = it },
             colors = androidx.compose.material3.SwitchDefaults.colors(
-                checkedThumbColor = TheNotBackgroundColorForOverlayUi,
-                uncheckedThumbColor = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.6f),
-                checkedTrackColor = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.2f),
+                checkedThumbColor = TheNotBackgroundColorForOverlayUi(),
+                uncheckedThumbColor = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.6f),
+                checkedTrackColor = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.2f),
                 uncheckedTrackColor = Color.Gray.copy(alpha = 0.2f)
             )
         )
@@ -401,14 +401,14 @@ private fun FloatValueSetting(value: FloatValue) {
             Text(
                 text = value.name,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TheNotBackgroundColorForOverlayUi
+                color = TheNotBackgroundColorForOverlayUi()
             )
             
             Text(
                 text = String.format("%.2f", value.value),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TheNotBackgroundColorForOverlayUi
+                color = TheNotBackgroundColorForOverlayUi()
             )
         }
         
@@ -421,9 +421,9 @@ private fun FloatValueSetting(value: FloatValue) {
             onValueChange = { value.value = it },
             valueRange = value.range,
             colors = androidx.compose.material3.SliderDefaults.colors(
-                thumbColor = TheNotBackgroundColorForOverlayUi,
-                activeTrackColor = TheNotBackgroundColorForOverlayUi,
-                inactiveTrackColor = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.2f)
+                thumbColor = TheNotBackgroundColorForOverlayUi(),
+                activeTrackColor = TheNotBackgroundColorForOverlayUi(),
+                inactiveTrackColor = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.2f)
             ),
             modifier = Modifier.height(20.dp)
         )
@@ -445,14 +445,14 @@ private fun IntValueSetting(value: IntValue) {
             Text(
                 text = value.name,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TheNotBackgroundColorForOverlayUi
+                color = TheNotBackgroundColorForOverlayUi()
             )
             
             Text(
                 text = value.value.toString(),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = TheNotBackgroundColorForOverlayUi
+                color = TheNotBackgroundColorForOverlayUi()
             )
         }
         
@@ -466,9 +466,9 @@ private fun IntValueSetting(value: IntValue) {
             valueRange = value.range.first.toFloat()..value.range.last.toFloat(),
             steps = value.range.last - value.range.first - 1,
             colors = androidx.compose.material3.SliderDefaults.colors(
-                thumbColor = TheNotBackgroundColorForOverlayUi,
-                activeTrackColor = TheNotBackgroundColorForOverlayUi,
-                inactiveTrackColor = TheNotBackgroundColorForOverlayUi.copy(alpha = 0.2f)
+                thumbColor = TheNotBackgroundColorForOverlayUi(),
+                activeTrackColor = TheNotBackgroundColorForOverlayUi(),
+                inactiveTrackColor = TheNotBackgroundColorForOverlayUi().copy(alpha = 0.2f)
             ),
             modifier = Modifier.height(20.dp)
         )
@@ -485,7 +485,7 @@ private fun ListValueSetting(value: ListValue) {
         Text(
             text = value.name,
             style = MaterialTheme.typography.bodyMedium,
-            color = TheNotBackgroundColorForOverlayUi
+            color = TheNotBackgroundColorForOverlayUi()
         )
         
         Spacer(modifier = Modifier.height(2.dp))
@@ -504,9 +504,9 @@ private fun ListValueSetting(value: ListValue) {
                     onClick = { value.value = item },
                     shape = RoundedCornerShape(8.dp),
                     color = if (isSelected) 
-                        TheNotBackgroundColorForOverlayUi
+                        TheNotBackgroundColorForOverlayUi()
                     else 
-                        TheNotBackgroundColorForOverlayUi.copy(alpha = 0.1f),
+                        TheNotBackgroundColorForOverlayUi().copy(alpha = 0.1f),
                     shadowElevation = if (isSelected) 4.dp else 0.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -515,7 +515,7 @@ private fun ListValueSetting(value: ListValue) {
                             color = if (isSelected) 
                                 Color.Black
                             else
-                                TheNotBackgroundColorForOverlayUi,
+                                TheNotBackgroundColorForOverlayUi(),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )

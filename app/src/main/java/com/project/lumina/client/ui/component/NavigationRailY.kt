@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun NavigationRailY(
     modifier: Modifier = Modifier,
-    containerColor: Color = NColorItem7,
+    containerColor: Color = NColorItem7(),
     contentColor: Color = contentColorFor(containerColor),
     header: @Composable (RowScope.() -> Unit)? = null,
     windowInsets: WindowInsets = NavigationRailDefaults.windowInsets,

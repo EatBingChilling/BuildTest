@@ -69,7 +69,7 @@ fun PackItem(
             .clickable { onClick() }
             .border(
                 width = if (isSelected) 1.dp else 0.dp,
-                color = if (isSelected) PColorItem1 else Color.Transparent,
+                color = if (isSelected) PColorItem1() else Color.Transparent,
                 shape = MaterialTheme.shapes.medium
             )
     ) {
@@ -91,7 +91,7 @@ fun PackItem(
                 Text(
                     text = "✓",
                     fontSize = 16.sp,
-                    color = PColorItem1,
+                    color = PColorItem1(),
                     modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }

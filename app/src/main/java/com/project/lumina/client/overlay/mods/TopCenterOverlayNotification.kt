@@ -82,10 +82,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.project.lumina.client.overlay.manager.OverlayManager
 import com.project.lumina.client.overlay.manager.OverlayWindow
-import com.project.lumina.client.ui.theme.TCOBackground
-import com.project.lumina.client.ui.theme.TCOGradient1
-import com.project.lumina.client.ui.theme.TCOGradient2
-import com.project.lumina.client.ui.theme.TextColorForModules
+import com.project.lumina.client.ui.theme.TCOBackground()
+import com.project.lumina.client.ui.theme.TCOGradient1()
+import com.project.lumina.client.ui.theme.TCOGradient2()
+import com.project.lumina.client.ui.theme.TextColorForModules()
 import kotlinx.coroutines.delay
 
 //byd自动打架
@@ -157,7 +157,7 @@ fun TopNotificationCard(
     
     val gradientBrush = remember {
         Brush.linearGradient(
-            colors = listOf(TCOGradient1, TCOGradient2),
+            colors = listOf(TCOGradient1(), TCOGradient2()),
             start = Offset.Zero,
             end = Offset(100f, 100f)
         )
@@ -184,7 +184,7 @@ fun TopNotificationCard(
             modifier = Modifier
                 .width(300.dp)    //宽度设置
                 .clip(RoundedCornerShape(12.dp))
-                .background(TCOBackground)
+                .background(TCOBackground())
                 .padding(12.dp)
         ) {
             Row(
@@ -208,7 +208,7 @@ fun TopNotificationCard(
                     } else {
                         Text(
                             text = notification.title.firstOrNull()?.uppercase() ?: "N",
-                            color = TextColorForModules,
+                            color = TextColorForModules(),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -225,13 +225,13 @@ fun TopNotificationCard(
                         text = notification.title,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = TextColorForModules,
+                        color = TextColorForModules(),
                         maxLines = 1
                     )
                     Text(
                         text = notification.subtitle,
                         fontSize = 12.sp,
-                        color = TextColorForModules.copy(alpha = 0.7f),
+                        color = TextColorForModules().copy(alpha = 0.7f),
                         maxLines = 1,
                         modifier = Modifier.padding(top = 2.dp)
                     )

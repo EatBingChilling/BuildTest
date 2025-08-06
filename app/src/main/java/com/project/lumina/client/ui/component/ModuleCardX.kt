@@ -37,7 +37,7 @@ fun ModuleCardX(
 ) {
     val gradientBrush = remember {
         Brush.linearGradient(
-            colors = listOf(MColorCard1, MColorCard2),
+            colors = listOf(MColorCard1(), MColorCard2()),
             start = Offset.Zero,
             end = Offset(500f, 500f)
         )
@@ -61,7 +61,7 @@ fun ModuleCardX(
             ),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (!element.isEnabled) MColorCard3 else Color.Transparent
+            containerColor = if (!element.isEnabled) MColorCard3() else Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (element.isEnabled) 8.dp else 2.dp

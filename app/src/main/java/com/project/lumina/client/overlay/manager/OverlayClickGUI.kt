@@ -48,9 +48,9 @@ import com.project.lumina.client.constructors.CheatCategory
 import com.project.lumina.client.overlay.kitsugui.ModuleContent
 import com.project.lumina.client.ui.component.ConfigCategoryContent
 import com.project.lumina.client.ui.component.NavigationRailItemX
-import com.project.lumina.client.ui.theme.TheBackgroundColorForOverlayUi
-import com.project.lumina.client.ui.theme.TheBackgroundColorForOverlayUi2
-import com.project.lumina.client.ui.theme.TheNotBackgroundColorForOverlayUi
+import com.project.lumina.client.ui.theme.TheBackgroundColorForOverlayUi()
+import com.project.lumina.client.ui.theme.TheBackgroundColorForOverlayUi()2
+import com.project.lumina.client.ui.theme.TheNotBackgroundColorForOverlayUi()
 
 
 class OverlayClickGUI : OverlayWindow() {
@@ -111,7 +111,7 @@ class OverlayClickGUI : OverlayWindow() {
             Card(
                 shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = TheBackgroundColorForOverlayUi
+                    containerColor = TheBackgroundColorForOverlayUi()
                 ),
                 modifier = Modifier
                     .width(582.dp)
@@ -122,7 +122,7 @@ class OverlayClickGUI : OverlayWindow() {
                     ) {}
                     .border(
                         width = 1.5.dp,
-                        color = TheNotBackgroundColorForOverlayUi,
+                        color = TheNotBackgroundColorForOverlayUi(),
                         shape = RoundedCornerShape(20.dp)
                     )
                     .clip(
@@ -131,7 +131,7 @@ class OverlayClickGUI : OverlayWindow() {
                 Box(modifier = Modifier.fillMaxSize()) {
 
                     Surface(
-                        color = TheBackgroundColorForOverlayUi2,
+                        color = TheBackgroundColorForOverlayUi()2,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .height(270.dp)
@@ -139,7 +139,7 @@ class OverlayClickGUI : OverlayWindow() {
                             .padding(top = 0.dp)
                             .border(
                                 width = 1.dp,
-                                color = TheNotBackgroundColorForOverlayUi,
+                                color = TheNotBackgroundColorForOverlayUi(),
                                 shape = RoundedCornerShape(
                                     topEnd = 20.dp,
                                     bottomEnd = 0.dp,
@@ -200,7 +200,7 @@ class OverlayClickGUI : OverlayWindow() {
                         Icon(
                             painter = painterResource(id = R.drawable.cross_circle_24),
                             contentDescription = "Close",
-                            tint = TheNotBackgroundColorForOverlayUi,
+                            tint = TheNotBackgroundColorForOverlayUi(),
                             modifier = Modifier.size(25.dp)
                         )
                     }
@@ -218,7 +218,7 @@ class OverlayClickGUI : OverlayWindow() {
                             )
                             .border(
                                 width = 1.dp,
-                                color = TheNotBackgroundColorForOverlayUi,
+                                color = TheNotBackgroundColorForOverlayUi(),
                                 shape = RoundedCornerShape(20.dp)
                             ),
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -229,7 +229,7 @@ class OverlayClickGUI : OverlayWindow() {
                         Icon(
                             painter = painterResource(id = R.drawable.discord_24),
                             contentDescription = "Discord",
-                            tint = TheNotBackgroundColorForOverlayUi,
+                            tint = TheNotBackgroundColorForOverlayUi(),
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable { 
@@ -242,7 +242,7 @@ class OverlayClickGUI : OverlayWindow() {
                         Icon(
                             painter = painterResource(id = R.drawable.browser_24),
                             contentDescription = "帮助",
-                            tint = TheNotBackgroundColorForOverlayUi,
+                            tint = TheNotBackgroundColorForOverlayUi(),
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable { 
@@ -255,7 +255,7 @@ class OverlayClickGUI : OverlayWindow() {
                         Icon(
                             painter = painterResource(id = R.drawable.circle_book_open_24),
                             contentDescription = "Trigger_Gui",
-                            tint = TheNotBackgroundColorForOverlayUi,
+                            tint = TheNotBackgroundColorForOverlayUi(),
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable { 
@@ -280,7 +280,7 @@ class OverlayClickGUI : OverlayWindow() {
                             )
                             .border(
                                 width = 1.dp,
-                                color = TheNotBackgroundColorForOverlayUi,
+                                color = TheNotBackgroundColorForOverlayUi(),
                                 shape = RoundedCornerShape(20.dp)
                             ),
                         verticalAlignment = Alignment.CenterVertically
@@ -288,7 +288,7 @@ class OverlayClickGUI : OverlayWindow() {
                         Icon(
                             painter = painterResource(id = R.drawable.moon_stars_24),
                             contentDescription = "Logo",
-                            tint = TheNotBackgroundColorForOverlayUi,
+                            tint = TheNotBackgroundColorForOverlayUi(),
                             modifier = Modifier
                                 .size(50.dp)
                                 .padding(top = 0.dp, bottom = 0.dp, start = 25.dp, end = 0.dp)
@@ -299,7 +299,7 @@ class OverlayClickGUI : OverlayWindow() {
                                 fontSize = 23.sp,
                                 fontFamily = pretzelsuwu,
                                 fontWeight = FontWeight.Thin,
-                                color = TheNotBackgroundColorForOverlayUi
+                                color = TheNotBackgroundColorForOverlayUi()
                             ),
                             modifier = Modifier
                                 .padding(top = 2.dp, bottom = 2.dp, start = 30.dp, end = 2.dp)
