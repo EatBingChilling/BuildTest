@@ -108,18 +108,17 @@ class DynamicIslandService : Service() {
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
             
-            // 关键修复1：对所有Android 12+设备使用软件渲染
+            // 对Android 12+和问题机型使用软件渲染
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || isProblematicDevice) {
                 setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-                Log.d("DynamicIslandService", "Using software rendering")
+                Log.d("DynamicIslandService", "Using software rendering for Android 12+")
             }
             
-            // 关键修复2：确保View不可点击
+            // 确保View本身不处理任何触摸事件
             isClickable = false
             isFocusable = false
             isFocusableInTouchMode = false
             isLongClickable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             
             setContent {
                 val isDarkTheme = isSystemInDarkTheme()
@@ -146,55 +145,49 @@ class DynamicIslandService : Service() {
             }
         }
 
-        // 关键修复3：使用WRAP_CONTENT而不是MATCH_PARENT
-        // 并且简化flag设置
-        windowParams = WindowManager.LayoutParams().apply {
-            type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        // 关键修复：正确的flag设置
+        // FLAG_NOT_FOCUSABLE - 不获取焦点
+        // FLAG_NOT_TOUCHABLE - 不接收触摸，触摸会穿透到下层
+        // 不要加 FLAG_NOT_TOUCH_MODAL！它是给可触摸窗口用的
+        windowParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,  // 改回MATCH_PARENT
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
-            }
-            
-            // 关键修复4：宽高都使用WRAP_CONTENT
-            width = WindowManager.LayoutParams.WRAP_CONTENT
-            height = WindowManager.LayoutParams.WRAP_CONTENT
-            
-            // 关键修复5：简化的flag组合，只保留必要的
-            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            
-            // 不添加以下可能有问题的flag：
-            // - FLAG_LAYOUT_IN_SCREEN
-            // - FLAG_LAYOUT_NO_LIMITS
-            // - FLAG_NOT_TOUCH_MODAL
-            // - FLAG_HARDWARE_ACCELERATED
-            
-            format = PixelFormat.TRANSLUCENT
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,  // 只用这两个flag！
+            PixelFormat.TRANSLUCENT
+        ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             y = dpToPx(initialYOffset)
             
-            // 窗口标题（用于调试）
-            title = "DynamicIsland"
-        }
-        
-        // 添加View到WindowManager
-        try {
-            windowManager.addView(composeView, windowParams)
-            Log.d("DynamicIslandService", "View added successfully with WRAP_CONTENT")
-        } catch (e: Exception) {
-            Log.e("DynamicIslandService", "Failed to add view", e)
-            // 如果失败，尝试备用方案
-            try {
-                windowParams.width = dpToPx(400f) // 使用固定宽度作为备用方案
-                windowManager.addView(composeView, windowParams)
-                Log.d("DynamicIslandService", "View added with fixed width fallback")
-            } catch (e2: Exception) {
-                Log.e("DynamicIslandService", "Failed to add view with fallback", e2)
+            // 对于Android 12+的额外处理
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Android 12引入了新的触摸限制，尝试通过反射绕过
+                try {
+                    val paramsClass = this::class.java
+                    // 尝试设置私有标志
+                    paramsClass.getDeclaredField("privateFlags")?.let { field ->
+                        field.isAccessible = true
+                        var privateFlags = field.getInt(this)
+                        // 清除可能阻止触摸穿透的私有标志
+                        // PRIVATE_FLAG_TRUSTED_OVERLAY = 0x20000000
+                        privateFlags = privateFlags and 0x20000000.inv()
+                        field.setInt(this, privateFlags)
+                    }
+                } catch (e: Exception) {
+                    Log.w("DynamicIslandService", "Could not modify private flags: ${e.message}")
+                }
             }
         }
         
+        windowManager.addView(composeView, windowParams)
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
+
         loadSettings()
     }
 
@@ -202,9 +195,9 @@ class DynamicIslandService : Service() {
         val manufacturer = Build.MANUFACTURER.lowercase()
         val brand = Build.BRAND.lowercase()
         val miuiVersion = getSystemProperty("ro.miui.ui.version.name")
-        val hyperos = getSystemProperty("ro.mi.os.version.name")
+        val hyperosVersion = getSystemProperty("ro.mi.os.version.name")
         
-        val result = when {
+        return when {
             // 小米/红米设备
             manufacturer.contains("xiaomi") || brand.contains("redmi") -> {
                 Log.d("DynamicIslandService", "Detected Xiaomi/Redmi device")
@@ -216,8 +209,8 @@ class DynamicIslandService : Service() {
                 true
             }
             // HyperOS/澎湃OS
-            !hyperos.isNullOrEmpty() -> {
-                Log.d("DynamicIslandService", "Detected HyperOS: $hyperos")
+            !hyperosVersion.isNullOrEmpty() -> {
+                Log.d("DynamicIslandService", "Detected HyperOS: $hyperosVersion")
                 true
             }
             // Android 15+
@@ -225,21 +218,14 @@ class DynamicIslandService : Service() {
                 Log.d("DynamicIslandService", "Detected Android 15+")
                 true
             }
-            // Android 12+ 对所有厂商
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                Log.d("DynamicIslandService", "Detected Android 12+")
-                true
-            }
             else -> false
         }
-        
-        return result
     }
     
     private fun getSystemProperty(key: String): String? {
         return try {
             val process = Runtime.getRuntime().exec("getprop $key")
-            process.inputStream.bufferedReader().use { it.readText().trim() }.takeIf { it.isNotEmpty() }
+            process.inputStream.bufferedReader().use { it.readText().trim() }
         } catch (e: Exception) {
             null
         }
@@ -285,11 +271,7 @@ class DynamicIslandService : Service() {
             ACTION_UPDATE_Y_OFFSET -> {
                 val yOffsetDp = intent.getFloatExtra(EXTRA_Y_OFFSET_DP, 0f)
                 windowParams.y = dpToPx(yOffsetDp)
-                try {
-                    windowManager.updateViewLayout(composeView, windowParams)
-                } catch (e: Exception) {
-                    Log.e("DynamicIslandService", "Failed to update layout", e)
-                }
+                windowManager.updateViewLayout(composeView, windowParams)
             }
 
             ACTION_UPDATE_SCALE -> {
@@ -319,13 +301,7 @@ class DynamicIslandService : Service() {
         super.onDestroy()
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         stopMusicObserver()
-        try {
-            if (::composeView.isInitialized) {
-                windowManager.removeView(composeView)
-            }
-        } catch (e: Exception) {
-            Log.e("DynamicIslandService", "Error removing view", e)
-        }
+        windowManager.removeView(composeView)
         serviceScope.cancel()
     }
 
