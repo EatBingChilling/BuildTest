@@ -27,6 +27,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
@@ -130,10 +132,16 @@ class DynamicIslandService : Service() {
         val initialYOffset = prefs.getFloat("dynamicIslandYOffset", 20f)
 
         // 创建根容器
-        rootView = TouchThroughFrameLayout(this)
+        rootView = TouchThroughFrameLayout(this).apply {
+            // 关键修复：为rootView也设置ViewTree所有者
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeViewModelStoreOwner(lifecycleOwner)
+            setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+        }
         
         // 创建ComposeView
         composeView = ComposeView(this).apply {
+            // ComposeView已经从父View继承了ViewTree所有者，但我们还是显式设置以确保
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
