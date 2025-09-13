@@ -59,6 +59,7 @@ class TouchThroughFrameLayout(context: Context) : FrameLayout(context) {
         isClickable = false
         isFocusable = false
         isLongClickable = false
+        isFocusableInTouchMode = false
     }
     
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
@@ -77,28 +78,10 @@ class TouchThroughFrameLayout(context: Context) : FrameLayout(context) {
     }
 }
 
-// 自定义ComposeView，确保触摸穿透
-class TouchThroughComposeView(context: Context) : ComposeView(context) {
-    init {
-        isClickable = false
-        isFocusable = false
-        isLongClickable = false
-    }
-    
-    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        // 不处理任何触摸事件，让事件穿透
-        return false
-    }
-    
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        return false
-    }
-}
-
 class DynamicIslandService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var rootView: TouchThroughFrameLayout
-    private lateinit var composeView: TouchThroughComposeView
+    private lateinit var composeView: ComposeView
     private var dynamicIslandState: DynamicIslandState? = null
     private lateinit var windowParams: WindowManager.LayoutParams
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -150,10 +133,22 @@ class DynamicIslandService : Service() {
         rootView = TouchThroughFrameLayout(this)
         
         // 创建ComposeView
-        composeView = TouchThroughComposeView(this).apply {
+        composeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            
+            // 确保ComposeView本身不处理触摸
+            isClickable = false
+            isFocusable = false
+            isLongClickable = false
+            isFocusableInTouchMode = false
+            
+            // 对问题机型使用软件渲染
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || isProblematicROM()) {
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                Log.d("DynamicIslandService", "Using software rendering")
+            }
             
             setContent {
                 val isDarkTheme = isSystemInDarkTheme()
@@ -181,44 +176,117 @@ class DynamicIslandService : Service() {
         }
         
         // 将ComposeView添加到容器
-        rootView.addView(composeView)
+        rootView.addView(composeView, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ))
 
-        // 关键修复：使用最简单的flag组合
-        // 只使用绝对必要的flag，避免任何可能导致触摸拦截的flag
-        windowParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            // 关键：只使用这两个基本flag
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dpToPx(initialYOffset)
-            
-            // 不要添加以下flag，它们可能导致问题：
-            // - FLAG_LAYOUT_IN_SCREEN (可能扩展触摸区域)
-            // - FLAG_LAYOUT_NO_LIMITS (可能扩展触摸区域)
-            // - FLAG_NOT_TOUCH_MODAL (用于可触摸窗口)
-            // - FLAG_WATCH_OUTSIDE_TOUCH (会接收触摸事件)
+        // 根据Android版本选择不同的配置
+        windowParams = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ 特殊配置
+            WindowManager.LayoutParams().apply {
+                type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                format = PixelFormat.TRANSLUCENT
+                
+                // 关键：只使用最基本的flag
+                flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                
+                // 设置窗口尺寸
+                width = WindowManager.LayoutParams.MATCH_PARENT
+                height = WindowManager.LayoutParams.WRAP_CONTENT
+                
+                // 设置位置
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = dpToPx(initialYOffset)
+                
+                // 设置透明度略小于1
+                alpha = 0.99f
+                
+                // 通过反射尝试设置额外属性
+                try {
+                    val wmParamsClass = WindowManager.LayoutParams::class.java
+                    
+                    // 设置inputFeatures来明确表示不需要输入
+                    val inputFeaturesField = wmParamsClass.getField("inputFeatures")
+                    val INPUT_FEATURE_NO_INPUT_CHANNEL = 0x00000002
+                    inputFeaturesField.setInt(this, INPUT_FEATURE_NO_INPUT_CHANNEL)
+                    
+                    Log.d("DynamicIslandService", "Set INPUT_FEATURE_NO_INPUT_CHANNEL for Android 12+")
+                } catch (e: Exception) {
+                    Log.w("DynamicIslandService", "Could not set input features: ${e.message}")
+                }
+            }
+        } else {
+            // Android 11及以下的标准配置
+            WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = dpToPx(initialYOffset)
+            }
         }
         
         // 添加View到WindowManager
         try {
             windowManager.addView(rootView, windowParams)
-            Log.d("DynamicIslandService", "View added successfully")
+            Log.d("DynamicIslandService", "View added successfully with touch-through configuration")
         } catch (e: Exception) {
             Log.e("DynamicIslandService", "Failed to add view", e)
         }
         
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
         loadSettings()
+    }
+
+    private fun isProblematicROM(): Boolean {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val brand = Build.BRAND.lowercase()
+        val miuiVersion = getSystemProperty("ro.miui.ui.version.name")
+        val hyperosVersion = getSystemProperty("ro.mi.os.version.name")
+        
+        return when {
+            // 小米/红米设备
+            manufacturer.contains("xiaomi") || brand.contains("redmi") -> {
+                Log.d("DynamicIslandService", "Detected Xiaomi/Redmi device")
+                true
+            }
+            // MIUI
+            !miuiVersion.isNullOrEmpty() -> {
+                Log.d("DynamicIslandService", "Detected MIUI: $miuiVersion")
+                true
+            }
+            // HyperOS/澎湃OS
+            !hyperosVersion.isNullOrEmpty() -> {
+                Log.d("DynamicIslandService", "Detected HyperOS: $hyperosVersion")
+                true
+            }
+            // Android 15+
+            Build.VERSION.SDK_INT >= 35 -> {
+                Log.d("DynamicIslandService", "Detected Android 15+")
+                true
+            }
+            else -> false
+        }
+    }
+    
+    private fun getSystemProperty(key: String): String? {
+        return try {
+            val process = Runtime.getRuntime().exec("getprop $key")
+            process.inputStream.bufferedReader().use { it.readText().trim() }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun loadSettings() {
@@ -292,7 +360,11 @@ class DynamicIslandService : Service() {
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         stopMusicObserver()
         if (::rootView.isInitialized) {
-            windowManager.removeView(rootView)
+            try {
+                windowManager.removeView(rootView)
+            } catch (e: Exception) {
+                Log.e("DynamicIslandService", "Error removing view", e)
+            }
         }
         serviceScope.cancel()
     }
