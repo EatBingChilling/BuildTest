@@ -100,19 +100,10 @@ class DynamicIslandService : Service() {
         val prefs = getSharedPreferences("SettingsPrefs", MODE_PRIVATE)
         val initialYOffset = prefs.getFloat("dynamicIslandYOffset", 20f)
 
-        // 检测是否是问题机型
-        val isProblematicDevice = isProblematicROM()
-        
         composeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-            
-            // 对Android 12+和问题机型使用软件渲染
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || isProblematicDevice) {
-                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-                Log.d("DynamicIslandService", "Using software rendering for Android 12+")
-            }
             
             // 确保View本身不处理任何触摸事件
             isClickable = false
@@ -145,43 +136,83 @@ class DynamicIslandService : Service() {
             }
         }
 
-        // 关键修复：正确的flag设置
-        // FLAG_NOT_FOCUSABLE - 不获取焦点
-        // FLAG_NOT_TOUCHABLE - 不接收触摸，触摸会穿透到下层
-        // 不要加 FLAG_NOT_TOUCH_MODAL！它是给可触摸窗口用的
-        windowParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,  // 改回MATCH_PARENT
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,  // 只用这两个flag！
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dpToPx(initialYOffset)
-            
-            // 对于Android 12+的额外处理
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Android 12引入了新的触摸限制，尝试通过反射绕过
+        // 关键修复：针对Android 12+的block_untrusted_touches问题
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+使用特殊配置来避免被标记为不受信任
+            windowParams = WindowManager.LayoutParams().apply {
+                type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                format = PixelFormat.TRANSLUCENT
+                
+                // 关键：设置窗口完全透明且不可触摸
+                // 这个flag组合告诉系统这个窗口不会处理任何输入
+                flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                        WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS or
+                        WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
+                
+                // 设置窗口尺寸
+                width = WindowManager.LayoutParams.MATCH_PARENT
+                height = WindowManager.LayoutParams.WRAP_CONTENT
+                
+                // 设置位置
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = dpToPx(initialYOffset)
+                
+                // 关键：设置窗口alpha为略小于1，这有助于系统识别为透明窗口
+                alpha = 0.99f
+                
+                // 设置窗口标题
+                title = "DynamicIsland"
+                
+                // 关键：通过反射设置私有标志，标记为受信任的覆盖层
                 try {
-                    val paramsClass = this::class.java
+                    val wmParamsClass = WindowManager.LayoutParams::class.java
+                    
+                    // 设置inputFeatures来明确表示不需要输入
+                    val inputFeaturesField = wmParamsClass.getField("inputFeatures")
+                    val INPUT_FEATURE_NO_INPUT_CHANNEL = 0x00000002
+                    inputFeaturesField.setInt(this, INPUT_FEATURE_NO_INPUT_CHANNEL)
+                    
                     // 尝试设置私有标志
-                    paramsClass.getDeclaredField("privateFlags")?.let { field ->
-                        field.isAccessible = true
-                        var privateFlags = field.getInt(this)
-                        // 清除可能阻止触摸穿透的私有标志
-                        // PRIVATE_FLAG_TRUSTED_OVERLAY = 0x20000000
-                        privateFlags = privateFlags and 0x20000000.inv()
-                        field.setInt(this, privateFlags)
-                    }
+                    val privateFlagsField = wmParamsClass.getDeclaredField("privateFlags")
+                    privateFlagsField.isAccessible = true
+                    var privateFlags = privateFlagsField.getInt(this)
+                    
+                    // PRIVATE_FLAG_TRUSTED_OVERLAY = 0x20000000 (536870912)
+                    // 设置为受信任的覆盖层
+                    privateFlags = privateFlags or 0x20000000
+                    
+                    // PRIVATE_FLAG_IS_ROUNDED_CORNERS_OVERLAY = 0x00100000 (1048576)
+                    // 标记为圆角覆盖层（类似系统UI）
+                    privateFlags = privateFlags or 0x00100000
+                    
+                    privateFlagsField.setInt(this, privateFlags)
+                    
+                    Log.d("DynamicIslandService", "Successfully set trusted overlay flags")
                 } catch (e: Exception) {
-                    Log.w("DynamicIslandService", "Could not modify private flags: ${e.message}")
+                    Log.e("DynamicIslandService", "Failed to set private flags", e)
                 }
+            }
+        } else {
+            // Android 11及以下使用标准配置
+            windowParams = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                },
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                y = dpToPx(initialYOffset)
             }
         }
         
@@ -189,46 +220,6 @@ class DynamicIslandService : Service() {
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
         loadSettings()
-    }
-
-    private fun isProblematicROM(): Boolean {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        val brand = Build.BRAND.lowercase()
-        val miuiVersion = getSystemProperty("ro.miui.ui.version.name")
-        val hyperosVersion = getSystemProperty("ro.mi.os.version.name")
-        
-        return when {
-            // 小米/红米设备
-            manufacturer.contains("xiaomi") || brand.contains("redmi") -> {
-                Log.d("DynamicIslandService", "Detected Xiaomi/Redmi device")
-                true
-            }
-            // MIUI
-            !miuiVersion.isNullOrEmpty() -> {
-                Log.d("DynamicIslandService", "Detected MIUI: $miuiVersion")
-                true
-            }
-            // HyperOS/澎湃OS
-            !hyperosVersion.isNullOrEmpty() -> {
-                Log.d("DynamicIslandService", "Detected HyperOS: $hyperosVersion")
-                true
-            }
-            // Android 15+
-            Build.VERSION.SDK_INT >= 35 -> {
-                Log.d("DynamicIslandService", "Detected Android 15+")
-                true
-            }
-            else -> false
-        }
-    }
-    
-    private fun getSystemProperty(key: String): String? {
-        return try {
-            val process = Runtime.getRuntime().exec("getprop $key")
-            process.inputStream.bufferedReader().use { it.readText().trim() }
-        } catch (e: Exception) {
-            null
-        }
     }
 
     private fun loadSettings() {
