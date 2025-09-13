@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -55,7 +56,6 @@ class DynamicIslandService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val lifecycleOwner = ServiceLifecycleOwner()
 
-    // 移除 isWarmedUp，避免延迟动画导致的问题
     private var musicModeEnabled = mutableStateOf(true)
 
     companion object {
@@ -93,14 +93,12 @@ class DynamicIslandService : Service() {
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-        // 读取Y轴初始位置
         val prefs = getSharedPreferences("SettingsPrefs", MODE_PRIVATE)
         val initialYOffset = prefs.getFloat("dynamicIslandYOffset", 20f)
 
-        // 关键：使用WRAP_CONTENT而不是MATCH_PARENT
-        // MATCH_PARENT可能导致整个屏幕宽度都被认为是窗口区域
+        // 关键修复：最简化的WindowParams
         windowParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,  // 改为WRAP_CONTENT
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -108,24 +106,13 @@ class DynamicIslandService : Service() {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             },
+            // 关键：只用这两个flag，不要任何其他flag
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             y = dpToPx(initialYOffset)
-            
-            // 对于Android 12+，设置额外属性
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try {
-                    // 设置inputFeatures来明确表示不需要输入
-                    val inputFeaturesField = WindowManager.LayoutParams::class.java.getField("inputFeatures")
-                    val INPUT_FEATURE_NO_INPUT_CHANNEL = 0x00000002
-                    inputFeaturesField.setInt(this, INPUT_FEATURE_NO_INPUT_CHANNEL)
-                } catch (e: Exception) {
-                    Log.w("DynamicIslandService", "Could not set input features: ${e.message}")
-                }
-            }
         }
 
         composeView = ComposeView(this).apply {
@@ -133,14 +120,17 @@ class DynamicIslandService : Service() {
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
             
-            // 关键：禁用所有触摸相关属性
+            // 关键：彻底禁用触摸
             isClickable = false
             isFocusable = false
             isFocusableInTouchMode = false
             isLongClickable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             
-            // 对Android 12+强制使用软件渲染
-            // 硬件加速可能导致触摸问题
+            // 关键：重写所有触摸相关方法，确保触摸穿透
+            setOnTouchListener { _, _ -> false }
+            
+            // 对Android 12+使用软件渲染
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 Log.d("DynamicIslandService", "Using software rendering for Android 12+")
@@ -155,7 +145,6 @@ class DynamicIslandService : Service() {
                     if (isDarkTheme) darkColorScheme() else lightColorScheme()
                 }
 
-                // 移除warmup动画，直接显示
                 MaterialTheme(colorScheme = colorScheme) {
                     val state = rememberDynamicIslandState()
 
@@ -168,6 +157,44 @@ class DynamicIslandService : Service() {
                         modifier = androidx.compose.ui.Modifier
                     )
                 }
+            }
+        }
+
+        // 关键：创建一个自定义的ComposeView子类来彻底阻止触摸事件
+        val originalComposeView = composeView
+        composeView = object : ComposeView(this@DynamicIslandService) {
+            init {
+                // 复制原有设置
+                setViewTreeLifecycleOwner(lifecycleOwner)
+                setViewTreeViewModelStoreOwner(lifecycleOwner)
+                setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+                
+                isClickable = false
+                isFocusable = false
+                isFocusableInTouchMode = false
+                isLongClickable = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                }
+                
+                // 复制Content
+                setContent(originalComposeView.content)
+            }
+            
+            // 关键：重写所有可能的触摸方法
+            override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+                // 直接返回false，不处理任何触摸事件
+                return false
+            }
+            
+            override fun onTouchEvent(event: MotionEvent?): Boolean {
+                return false
+            }
+            
+            override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+                return false
             }
         }
 
