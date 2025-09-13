@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -103,6 +104,7 @@ class DynamicIslandService : Service() {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            
             setContent {
                 val isDarkTheme = isSystemInDarkTheme()
                 val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -128,25 +130,54 @@ class DynamicIslandService : Service() {
             }
         }
 
-        // --- 关键修复 ---
-        // 参考 HUDService.kt 的实现，将窗口宽度设置为 MATCH_PARENT。
-        // 这会创建一个与屏幕等宽的透明“舞台”，让灵动岛UI在内部自由地进行宽度动画，
-        // 而不会因为窗口大小的限制而被裁剪。
-        // 高度保持 WRAP_CONTENT，这样窗口只会占据内容所需的垂直空间。
-        // gravity 保持 TOP or CENTER_HORIZONTAL，确保内容在顶部水平居中。
+        // 关键修复：正确的flag组合和顺序
+        // 1. FLAG_NOT_FOCUSABLE - 不获取焦点
+        // 2. FLAG_NOT_TOUCHABLE - 不接收触摸，触摸穿透
+        // 3. FLAG_LAYOUT_IN_SCREEN - 可以延伸到屏幕装饰之下
+        // 不使用 FLAG_NOT_TOUCH_MODAL，因为它是给可触摸窗口用的
         windowParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT, // <-- 从 WRAP_CONTENT 修改为此
+            WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = dpToPx(initialYOffset) // 设置初始Y位置
+            y = dpToPx(initialYOffset)
+            
+            // 对于Android 12+，可能需要额外设置
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Android 12+ 增强触摸穿透
+                try {
+                    val layoutInScreenAndTouchable = 
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS  // 允许窗口延伸
+                    
+                    flags = layoutInScreenAndTouchable
+                    
+                    // 使用反射设置私有标志（如果需要）
+                    val field = this::class.java.getDeclaredField("privateFlags")
+                    field.isAccessible = true
+                    var privateFlags = field.getInt(this)
+                    // 0x00000010 = PRIVATE_FLAG_FORCE_SHOW_STATUS_BAR
+                    // 0x00000040 = PRIVATE_FLAG_IS_ROUNDED_CORNERS_OVERLAY  
+                    privateFlags = privateFlags or 0x00000010
+                    field.setInt(this, privateFlags)
+                } catch (e: Exception) {
+                    Log.e("DynamicIslandService", "Failed to set special flags for Android 12+", e)
+                }
+            }
         }
+        
         windowManager.addView(composeView, windowParams)
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
 
@@ -223,7 +254,11 @@ class DynamicIslandService : Service() {
         super.onDestroy()
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         stopMusicObserver()
-        windowManager.removeView(composeView)
+        try {
+            windowManager.removeView(composeView)
+        } catch (e: Exception) {
+            Log.e("DynamicIslandService", "Error removing view", e)
+        }
         serviceScope.cancel()
     }
 
