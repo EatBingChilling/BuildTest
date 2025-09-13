@@ -10,8 +10,10 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -50,9 +52,53 @@ class ServiceLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateReg
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 }
 
+// 自定义容器，确保触摸穿透
+class TouchThroughFrameLayout(context: Context) : FrameLayout(context) {
+    init {
+        // 确保这个ViewGroup不会拦截触摸
+        isClickable = false
+        isFocusable = false
+        isLongClickable = false
+    }
+    
+    override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
+        // 永远不拦截触摸事件
+        return false
+    }
+    
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        // 不处理任何触摸事件
+        return false
+    }
+    
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        // 不分发触摸事件给子View，直接返回false让事件穿透
+        return false
+    }
+}
+
+// 自定义ComposeView，确保触摸穿透
+class TouchThroughComposeView(context: Context) : ComposeView(context) {
+    init {
+        isClickable = false
+        isFocusable = false
+        isLongClickable = false
+    }
+    
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        // 不处理任何触摸事件，让事件穿透
+        return false
+    }
+    
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        return false
+    }
+}
+
 class DynamicIslandService : Service() {
     private lateinit var windowManager: WindowManager
-    private lateinit var composeView: ComposeView
+    private lateinit var rootView: TouchThroughFrameLayout
+    private lateinit var composeView: TouchThroughComposeView
     private var dynamicIslandState: DynamicIslandState? = null
     private lateinit var windowParams: WindowManager.LayoutParams
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -100,16 +146,14 @@ class DynamicIslandService : Service() {
         val prefs = getSharedPreferences("SettingsPrefs", MODE_PRIVATE)
         val initialYOffset = prefs.getFloat("dynamicIslandYOffset", 20f)
 
-        composeView = ComposeView(this).apply {
+        // 创建根容器
+        rootView = TouchThroughFrameLayout(this)
+        
+        // 创建ComposeView
+        composeView = TouchThroughComposeView(this).apply {
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-            
-            // 确保View本身不处理任何触摸事件
-            isClickable = false
-            isFocusable = false
-            isFocusableInTouchMode = false
-            isLongClickable = false
             
             setContent {
                 val isDarkTheme = isSystemInDarkTheme()
@@ -135,90 +179,45 @@ class DynamicIslandService : Service() {
                 }
             }
         }
+        
+        // 将ComposeView添加到容器
+        rootView.addView(composeView)
 
-        // 关键修复：针对Android 12+的block_untrusted_touches问题
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+使用特殊配置来避免被标记为不受信任
-            windowParams = WindowManager.LayoutParams().apply {
-                type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                format = PixelFormat.TRANSLUCENT
-                
-                // 关键：设置窗口完全透明且不可触摸
-                // 这个flag组合告诉系统这个窗口不会处理任何输入
-                flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                        WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS or
-                        WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
-                
-                // 设置窗口尺寸
-                width = WindowManager.LayoutParams.MATCH_PARENT
-                height = WindowManager.LayoutParams.WRAP_CONTENT
-                
-                // 设置位置
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                y = dpToPx(initialYOffset)
-                
-                // 关键：设置窗口alpha为略小于1，这有助于系统识别为透明窗口
-                alpha = 0.99f
-                
-                // 设置窗口标题
-                title = "DynamicIsland"
-                
-                // 关键：通过反射设置私有标志，标记为受信任的覆盖层
-                try {
-                    val wmParamsClass = WindowManager.LayoutParams::class.java
-                    
-                    // 设置inputFeatures来明确表示不需要输入
-                    val inputFeaturesField = wmParamsClass.getField("inputFeatures")
-                    val INPUT_FEATURE_NO_INPUT_CHANNEL = 0x00000002
-                    inputFeaturesField.setInt(this, INPUT_FEATURE_NO_INPUT_CHANNEL)
-                    
-                    // 尝试设置私有标志
-                    val privateFlagsField = wmParamsClass.getDeclaredField("privateFlags")
-                    privateFlagsField.isAccessible = true
-                    var privateFlags = privateFlagsField.getInt(this)
-                    
-                    // PRIVATE_FLAG_TRUSTED_OVERLAY = 0x20000000 (536870912)
-                    // 设置为受信任的覆盖层
-                    privateFlags = privateFlags or 0x20000000
-                    
-                    // PRIVATE_FLAG_IS_ROUNDED_CORNERS_OVERLAY = 0x00100000 (1048576)
-                    // 标记为圆角覆盖层（类似系统UI）
-                    privateFlags = privateFlags or 0x00100000
-                    
-                    privateFlagsField.setInt(this, privateFlags)
-                    
-                    Log.d("DynamicIslandService", "Successfully set trusted overlay flags")
-                } catch (e: Exception) {
-                    Log.e("DynamicIslandService", "Failed to set private flags", e)
-                }
-            }
-        } else {
-            // Android 11及以下使用标准配置
-            windowParams = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                } else {
-                    @Suppress("DEPRECATION")
-                    WindowManager.LayoutParams.TYPE_PHONE
-                },
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT
-            ).apply {
-                gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                y = dpToPx(initialYOffset)
-            }
+        // 关键修复：使用最简单的flag组合
+        // 只使用绝对必要的flag，避免任何可能导致触摸拦截的flag
+        windowParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            // 关键：只使用这两个基本flag
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = dpToPx(initialYOffset)
+            
+            // 不要添加以下flag，它们可能导致问题：
+            // - FLAG_LAYOUT_IN_SCREEN (可能扩展触摸区域)
+            // - FLAG_LAYOUT_NO_LIMITS (可能扩展触摸区域)
+            // - FLAG_NOT_TOUCH_MODAL (用于可触摸窗口)
+            // - FLAG_WATCH_OUTSIDE_TOUCH (会接收触摸事件)
         }
         
-        windowManager.addView(composeView, windowParams)
+        // 添加View到WindowManager
+        try {
+            windowManager.addView(rootView, windowParams)
+            Log.d("DynamicIslandService", "View added successfully")
+        } catch (e: Exception) {
+            Log.e("DynamicIslandService", "Failed to add view", e)
+        }
+        
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_START)
-
         loadSettings()
     }
 
@@ -262,7 +261,7 @@ class DynamicIslandService : Service() {
             ACTION_UPDATE_Y_OFFSET -> {
                 val yOffsetDp = intent.getFloatExtra(EXTRA_Y_OFFSET_DP, 0f)
                 windowParams.y = dpToPx(yOffsetDp)
-                windowManager.updateViewLayout(composeView, windowParams)
+                windowManager.updateViewLayout(rootView, windowParams)
             }
 
             ACTION_UPDATE_SCALE -> {
@@ -292,7 +291,9 @@ class DynamicIslandService : Service() {
         super.onDestroy()
         lifecycleOwner.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         stopMusicObserver()
-        windowManager.removeView(composeView)
+        if (::rootView.isInitialized) {
+            windowManager.removeView(rootView)
+        }
         serviceScope.cancel()
     }
 
