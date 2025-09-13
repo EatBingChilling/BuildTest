@@ -32,30 +32,36 @@ abstract class OverlayWindow {
             x = 0
             y = 0
             type = LayoutParams.TYPE_APPLICATION_OVERLAY
-            flags = LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                    LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS or
-                    LayoutParams.FLAG_NOT_FOCUSABLE
+            
+            // 关键修复：只使用最基本的flag配置
+            // 移除所有可能导致触摸问题的flag
+            flags = LayoutParams.FLAG_NOT_FOCUSABLE
+            // 移除的问题flag：
+            // - FLAG_LAYOUT_IN_SCREEN (可能扩展触摸区域)
+            // - FLAG_NOT_TOUCH_MODAL (与触摸穿透冲突)  
+            // - FLAG_WATCH_OUTSIDE_TOUCH (会监听外部触摸，干扰其他窗口)
+            // - FLAG_HARDWARE_ACCELERATED (可能在某些设备上有问题)
+            // - FLAG_LAYOUT_NO_LIMITS (最大的问题flag，会扩展窗口到屏幕外)
+            // - FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS (不必要的flag)
+            
             format = PixelFormat.TRANSLUCENT
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                alpha =
-                    (OverlayManager.currentContext!!.getSystemService(Service.INPUT_SERVICE) as? InputManager)?.maximumObscuringOpacityForTouch
-                        ?: 1f
-            }
+            
+            // 移除alpha设置，避免可能的问题
+            // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            //     alpha = (OverlayManager.currentContext!!.getSystemService(Service.INPUT_SERVICE) as? InputManager)?.maximumObscuringOpacityForTouch ?: 1f
+            // }
         }
     }
 
     open val composeView by lazy {
         ComposeView(OverlayManager.currentContext!!).apply {
-            systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+            // 简化系统UI设置，移除可能有问题的flag
+            systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            
+            // 确保触摸属性正确设置
+            isClickable = true  // 按钮需要能被点击
+            isFocusable = false  // 但不要获取焦点
+            isFocusableInTouchMode = false
         }
     }
 
@@ -100,5 +106,4 @@ abstract class OverlayWindow {
 
     @Composable
     abstract fun Content()
-
 }
