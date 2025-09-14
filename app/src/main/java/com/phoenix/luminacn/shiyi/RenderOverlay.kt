@@ -1,9 +1,8 @@
 package com.phoenix.luminacn.shiyi
 
 import android.content.Context
-import android.graphics.Point
+import android.graphics.PixelFormat
 import android.os.Build
-import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -18,37 +17,10 @@ import com.phoenix.luminacn.overlay.manager.OverlayWindow
 
 class RenderOverlay : OverlayWindow() {
 
-    // --- THE CRITICAL FIX FOR LANDSCAPE FULLSCREEN ---
-    // We override layoutParams to programmatically calculate the true screen size,
-    // ignoring the system's incorrect assumptions for landscape overlays.
+    // --- 重构后的 layoutParams，避免触摸拦截问题 ---
     override val layoutParams by lazy {
-        val wm = OverlayManager.currentContext!!.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        
-        // Get the real, physical screen dimensions.
-        val realScreenWidth: Int
-        val realScreenHeight: Int
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowMetrics = wm.currentWindowMetrics
-            val bounds = windowMetrics.bounds
-            realScreenWidth = bounds.width()
-            realScreenHeight = bounds.height()
-        } else {
-            @Suppress("DEPRECATION")
-            val display = wm.defaultDisplay
-            val size = Point()
-            @Suppress("DEPRECATION")
-            display.getRealSize(size)
-            realScreenWidth = size.x
-            realScreenHeight = size.y
-        }
-
         WindowManager.LayoutParams().apply {
-            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-            
+            // 使用更安全的窗口类型
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -56,15 +28,22 @@ class RenderOverlay : OverlayWindow() {
                 WindowManager.LayoutParams.TYPE_PHONE
             }
 
-            // --- KEY CHANGE: Set exact pixel dimensions instead of MATCH_PARENT ---
-            width = realScreenWidth
-            height = realScreenHeight
+            // 关键修改：使用 WRAP_CONTENT 避免全屏覆盖
+            width = WindowManager.LayoutParams.WRAP_CONTENT
+            height = WindowManager.LayoutParams.WRAP_CONTENT
             
+            // 关键修改：移除所有可能导致触摸问题的 flags
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            
+            // 保持在左上角，但实际绘制区域由内容决定
             gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
-            format = android.graphics.PixelFormat.TRANSLUCENT
             
+            format = PixelFormat.TRANSLUCENT
+            
+            // 适配刘海屏
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
@@ -120,19 +99,26 @@ class RenderOverlay : OverlayWindow() {
     override fun Content() {
         if (!isOverlayEnabled()) return
 
-        // We can still use fillMaxSize here because our root window is now correctly sized.
-        Box(modifier = Modifier.fillMaxSize()) {
+        // 使用 Box 包装，但不强制 fillMaxSize
+        Box {
             AndroidView(
                 factory = { ctx ->
                     RenderOverlayView(ctx).apply {
+                        // 设置透明背景
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        // 使用 WRAP_CONTENT 让内容决定大小
                         layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
                         )
+                        
+                        // 确保视图不拦截触摸
+                        isClickable = false
+                        isFocusable = false
+                        isFocusableInTouchMode = false
+                        setOnTouchListener { _, _ -> false }
                     }
                 },
-                modifier = Modifier.fillMaxSize(),
                 update = { view ->
                     view.post { setImmersiveMode(view) }
                     view.invalidate()
