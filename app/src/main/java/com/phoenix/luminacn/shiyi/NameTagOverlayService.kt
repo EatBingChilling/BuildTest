@@ -88,30 +88,34 @@ class NameTagOverlayService : Service() {
 
 class NameTagOverlay : OverlayWindow() {
 
+    // --- 重构后的安全 layoutParams ---
     private val _layoutParams by lazy {
-        super.layoutParams.apply {
-            flags = flags or
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS or
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN
-
-            width = WindowManager.LayoutParams.MATCH_PARENT
-            height = WindowManager.LayoutParams.MATCH_PARENT
-            gravity = Gravity.TOP or Gravity.START
-            x = 0
-            y = 0
-            format = PixelFormat.TRANSLUCENT
-
+        WindowManager.LayoutParams().apply {
+            // 使用安全的窗口类型
             type = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
+            }
+
+            // 关键修改：只使用安全的 flags
+            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+
+            // 如果需要全屏绘制，使用确切像素值而不是 MATCH_PARENT
+            val metrics = OverlayManager.currentContext!!.resources.displayMetrics
+            width = metrics.widthPixels
+            height = metrics.heightPixels
+
+            gravity = Gravity.TOP or Gravity.START
+            x = 0
+            y = 0
+            format = PixelFormat.TRANSLUCENT
+
+            // 适配刘海屏
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
     }
@@ -133,6 +137,16 @@ class NameTagOverlay : OverlayWindow() {
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
                             )
+                            
+                            // 确保不拦截触摸
+                            isClickable = false
+                            isFocusable = false
+                            isFocusableInTouchMode = false
+                            setOnTouchListener { _, _ -> false }
+                            
+                            // 使用软件渲染避免某些设备问题
+                            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                            
                             systemUiVisibility = (
                                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
@@ -144,6 +158,9 @@ class NameTagOverlay : OverlayWindow() {
                         // 返回一个空的 View 作为备选
                         View(ctx).apply {
                             setBackgroundColor(Color.TRANSPARENT)
+                            isClickable = false
+                            isFocusable = false
+                            setOnTouchListener { _, _ -> false }
                         }
                     }
                 },
@@ -162,7 +179,6 @@ class NameTagOverlay : OverlayWindow() {
         LaunchedEffect(Unit) {
             while (true) {
                 delay(1000) // 每秒检查一次
-                // 触发重新组合以更新 session
             }
         }
 
