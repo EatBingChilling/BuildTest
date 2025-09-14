@@ -7,11 +7,9 @@ import android.graphics.BlurMaskFilter
 import android.view.WindowManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,16 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.phoenix.luminacn.R
@@ -42,24 +36,21 @@ import kotlin.random.Random
 
 class OverlayButton : OverlayWindow() {
 
-    // --- 修复后的安全 layoutParams ---
     private val _layoutParams by lazy {
         super.layoutParams.apply {
-            // ✅ 只使用安全的 flags，移除所有危险的 flags
-            flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            flags = flags or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                    WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 
-            // ✅ 保持小窗口尺寸
-            width = WindowManager.LayoutParams.WRAP_CONTENT
-            height = WindowManager.LayoutParams.WRAP_CONTENT
+            layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
+            windowAnimations = android.R.style.Animation_Toast
             x = 0
             y = 100
-            
-            // 适配刘海屏（可选）
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
         }
     }
 
@@ -70,17 +61,6 @@ class OverlayButton : OverlayWindow() {
     private val graceGUI by lazy { GraceMenuUi() }
     private val protohaxUi by lazy { ProtohaxUi() }
     private val clickGUI by lazy { ClickGUI() }
-
-    // 枚举来定义图标类型
-    enum class IconType {
-        VECTOR, BITMAP
-    }
-
-    // 数据类来存储图标信息
-    data class IconResource(
-        val resourceId: Int,
-        val type: IconType
-    )
 
     @Composable
     override fun Content() {
@@ -96,20 +76,17 @@ class OverlayButton : OverlayWindow() {
             windowManager.updateViewLayout(composeView, _layoutParams)
         }
 
-        // 使用位图 img 作为图标
-        val iconResource = IconResource(
-            resourceId = R.drawable.img,
-            type = IconType.BITMAP
-        )
+        val logoVector: ImageVector = ImageVector.vectorResource(id = R.drawable.logo)
+
 
         val prefs = context.getSharedPreferences("SettingsPrefs", Context.MODE_PRIVATE)
-        // 默认改为 ProtohaxUi
-        var selectedGUIName by remember { mutableStateOf(prefs.getString("selectedGUI", "ProtohaxUi") ?: "ProtohaxUi") }
+        var selectedGUIName by remember { mutableStateOf(prefs.getString("selectedGUI", "KitsuGUI") ?: "KitsuGUI") }
+
 
         DisposableEffect(Unit) {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 if (key == "selectedGUI") {
-                    selectedGUIName = prefs.getString("selectedGUI", "ProtohaxUi") ?: "ProtohaxUi"
+                    selectedGUIName = prefs.getString("selectedGUI", "KitsuGUI") ?: "KitsuGUI"
                 }
             }
             prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -128,6 +105,9 @@ class OverlayButton : OverlayWindow() {
         Box(
             modifier = Modifier
                 .size(48.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .clipToBounds()
+                .padding(5.dp)
                 .pointerInput(Unit) {
                     detectDragGestures { _, drag ->
                         _layoutParams.x += drag.x.toInt()
@@ -137,45 +117,14 @@ class OverlayButton : OverlayWindow() {
                 }
                 .clickable { OverlayManager.showOverlayWindow(selectedGUI) }
         ) {
-            // 背景雾化动画
             FogAnimation()
 
-            // 图标显示 - 使用完整的圆形容器
-            IconDisplay(
-                iconResource = iconResource,
-                modifier = Modifier.fillMaxSize()
+            Icon(
+                imageVector = logoVector,
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.align(Alignment.Center)
             )
-        }
-    }
-
-    @Composable
-    private fun IconDisplay(
-        iconResource: IconResource,
-        modifier: Modifier = Modifier
-    ) {
-        when (iconResource.type) {
-            IconType.VECTOR -> {
-                // 对于Vector资源使用Icon组件
-                Icon(
-                    imageVector = ImageVector.vectorResource(id = iconResource.resourceId),
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = modifier
-                        .clip(CircleShape)
-                        .padding(4.dp)
-                )
-            }
-            IconType.BITMAP -> {
-                // 对于Bitmap资源(PNG/JPG)使用Image组件
-                Image(
-                    painter = painterResource(id = iconResource.resourceId),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop, // 使用Crop来填满整个容器
-                    modifier = modifier
-                        .clip(CircleShape) // 圆形裁剪
-                        .clipToBounds()
-                )
-            }
         }
     }
 }
@@ -247,11 +196,7 @@ private fun FogAnimation() {
         AnimatedLayer(offsetSt, alphaSt, cfg.sizeFactor, cfg.blurFactor, cfg.angleDeg)
     }
 
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(CircleShape) // 确保雾化动画也是圆形的
-    ) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
 
